@@ -10,10 +10,68 @@
   --trac-bg: #F1F8E9;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+* {
+  box-sizing: border-box;
+}
+
 body {
-  background-color: #F1F8E9; /* trac background light */
+  margin: 0;
+  min-width: 320px;
+  background-color: #F1F8E9;
   color: #111827;
   font-family: system-ui, -apple-system, sans-serif;
+  overflow-x: hidden;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  min-height: 2.75rem;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+p,
+li,
+label,
+td,
+th,
+span,
+button,
+input,
+select,
+textarea {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+:focus-visible {
+  outline: 3px solid rgba(46, 125, 50, 0.35);
+  outline-offset: 2px;
+  border-radius: 0.75rem;
+}
+
+@media (max-width: 639.98px) {
+  body {
+    padding: 0;
+  }
 }
 
 /* TRAC Theme Utilities */
@@ -30,4 +88,53 @@ body {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+.trac-button {
+  background: linear-gradient(105deg, var(--trac-primary) 0%, var(--trac-primary-light) 38%, var(--trac-secondary) 72%, var(--trac-secondary-dark) 100%);
+  background-size: 220% 100%;
+  background-position: 0% 50%;
+  color: white;
+  box-shadow: 0 8px 18px rgba(27, 94, 32, 0.22);
+  transition: transform 200ms ease, box-shadow 200ms ease, filter 200ms ease, background-position 350ms ease;
+}
+
+.trac-button:hover:not(:disabled) {
+  background-position: 100% 50%;
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(27, 94, 32, 0.28);
+}
+
+.trac-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.trac-button-outline {
+  border: 2px solid transparent;
+  background: linear-gradient(white, white) padding-box, linear-gradient(105deg, var(--trac-primary), var(--trac-secondary)) border-box;
+  color: var(--trac-primary);
+}
+
+.trac-button-outline:hover:not(:disabled) {
+  background: linear-gradient(105deg, var(--trac-primary), var(--trac-secondary)) padding-box, linear-gradient(105deg, var(--trac-primary), var(--trac-secondary)) border-box;
+  color: white;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trac-button {
+    transition: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }

@@ -12,14 +12,8 @@ import {
   FaGoogle
 } from "react-icons/fa";
 import { useNavigate, Link } from "react-router-dom";
-import { SCHOOL, DEPARTMENTS, COURSE_DEPARTMENT_MAP, DEPARTMENT_COURSE_MAP, SYSTEM } from "../../config/trac.config";
-
-/* =====================================================
-   TRAC DEPARTMENTS - From Config
-===================================================== */
-const departments = DEPARTMENTS;
-const courseDepartmentMap = COURSE_DEPARTMENT_MAP;
-const departmentCourseMap = DEPARTMENT_COURSE_MAP;
+import { SCHOOL, SYSTEM } from "../../config/trac.config";
+import Toast from "../components/Toast";
 
 /* =====================================================
    PASSWORD REQUIREMENTS CHECKLIST COMPONENT
@@ -51,7 +45,7 @@ const PasswordRequirements = ({ password }) => {
           </div>
         ))}
       </div>
-      
+
       {password && (
         <div className="mt-2">
           <div className="flex items-center justify-between mb-1">
@@ -62,13 +56,13 @@ const PasswordRequirements = ({ password }) => {
           </div>
           <div className="flex space-x-1">
             {[1, 2, 3, 4, 5].map(i => (
-              <div 
+              <div
                 key={i}
-                className={`h-1 flex-1 rounded-full ${i <= metCount ? 
-                  metCount <= 1 ? 'bg-red-500' : 
-                  metCount === 2 ? 'bg-orange-500' : 
-                  metCount === 3 ? 'bg-yellow-500' : 
-                  metCount === 4 ? 'bg-blue-500' : 'bg-green-500' 
+                className={`h-1 flex-1 rounded-full ${i <= metCount ?
+                  metCount <= 1 ? 'bg-red-500' :
+                  metCount === 2 ? 'bg-orange-500' :
+                  metCount === 3 ? 'bg-yellow-500' :
+                  metCount === 4 ? 'bg-blue-500' : 'bg-green-500'
                   : 'bg-gray-200'}`}
               />
             ))}
@@ -100,9 +94,12 @@ export default function AuthPage() {
   const navigate = useNavigate();
   const [isSignUp, setIsSignUp] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  
+  const [academicCatalog, setAcademicCatalog] = useState([]);
+  const [academicCatalogLoading, setAcademicCatalogLoading] = useState(true);
+  const [academicCatalogError, setAcademicCatalogError] = useState('');
+
   const API_BASE_URL = `${SYSTEM.apiBaseUrl}/auth`;
-  
+
   // FORGOT PASSWORD STATES
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
@@ -116,7 +113,7 @@ export default function AuthPage() {
   const [resetError, setResetError] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
-  
+
   const [verificationCode, setVerificationCode] = useState(["", "", "", "", "", ""]);
   const [showEnterCode, setShowEnterCode] = useState(false);
   const [codeError, setCodeError] = useState("");
@@ -151,6 +148,45 @@ export default function AuthPage() {
 
   const [errors, setErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState('');
+  const [toast, setToast] = useState(null);
+
+  const departments = academicCatalog.map(institute => ({
+    code: institute.code,
+    name: `${institute.code} - ${institute.name}`,
+    fullName: institute.name
+  }));
+  const departmentCourseMap = Object.fromEntries(academicCatalog.map(institute => [
+    institute.code,
+    institute.programs.map(program => program.name)
+  ]));
+  const courseDepartmentMap = Object.fromEntries(academicCatalog.flatMap(institute =>
+    institute.programs.map(program => [program.name, institute.code])
+  ));
+
+  useEffect(() => {
+    let isCurrent = true;
+    const fetchAcademicCatalog = async () => {
+      setAcademicCatalogLoading(true);
+      setAcademicCatalogError('');
+      try {
+        const response = await fetch(`${SYSTEM.apiBaseUrl}/public/settings`);
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Signup options are unavailable right now.');
+        const institutes = Array.isArray(data.academic_settings) ? data.academic_settings : [];
+        if (!institutes.length) throw new Error('No institutes or courses are currently configured. Contact the Registrar’s Office.');
+        if (isCurrent) setAcademicCatalog(institutes.filter(institute => institute.code && institute.name && Array.isArray(institute.programs)));
+      } catch (error) {
+        if (isCurrent) {
+          setAcademicCatalog([]);
+          setAcademicCatalogError(error.message || 'Signup options are unavailable right now. Please try again later.');
+        }
+      } finally {
+        if (isCurrent) setAcademicCatalogLoading(false);
+      }
+    };
+    fetchAcademicCatalog();
+    return () => { isCurrent = false; };
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem('authToken');
@@ -308,7 +344,7 @@ export default function AuthPage() {
       setResendTimer(60);
       setCanResend(false);
       setVerificationCode(["", "", "", "", "", ""]);
-      alert(`✅ New code sent to ${forgotEmail}`);
+      setToast({ type: 'success', message: `New code sent to ${forgotEmail}` });
     } catch (err) {
       setForgotError(err.message);
     } finally {
@@ -347,9 +383,9 @@ export default function AuthPage() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || 'Failed to reset password');
-      alert('✅ Password reset successfully! You can now login with your new password.');
       resetForgotPassword();
-      navigate('/');
+      setIsSignUp(false);
+      setToast({ type: 'success', message: 'Password reset successfully. You can now log in with your new password.' });
     } catch (err) {
       setResetError(err.message);
     } finally {
@@ -372,7 +408,7 @@ export default function AuthPage() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || 'Invalid verification code');
-      alert('✅ Email verified successfully! You can now login.');
+      setToast({ type: 'success', message: 'Email verified successfully! You can now log in.' });
       setShowVerificationModal(false);
       setVerificationCodeInput(["", "", "", "", "", ""]);
       setIsSignUp(false);
@@ -399,7 +435,7 @@ export default function AuthPage() {
       setVerificationCanResend(false);
       setVerificationCodeInput(["", "", "", "", "", ""]);
       setVerificationError('');
-      alert('✅ New verification code sent to your email!');
+      setToast({ type: 'success', message: 'A new verification code was sent to your email.' });
     } catch (err) {
       setVerificationError(err.message);
     } finally {
@@ -554,6 +590,14 @@ export default function AuthPage() {
     setErrors({});
     setSuccessMessage('');
     try {
+      if (academicCatalogLoading || academicCatalogError) {
+        throw new Error(academicCatalogError || 'Wait for the current institute and course list to load.');
+      }
+      const selectedInstitute = academicCatalog.find(institute => institute.code === formData.department);
+      if (!selectedInstitute || !selectedInstitute.programs.some(program => program.name === formData.course)) {
+        setErrors({ department: 'Select an institute and a course offered by it.' });
+        throw new Error('Please select a valid institute and course.');
+      }
       if (!formData.last_name) setErrors(prev => ({ ...prev, last_name: 'Last name is required' }));
       if (!formData.first_name) setErrors(prev => ({ ...prev, first_name: 'First name is required' }));
       if (!formData.id_number) setErrors(prev => ({ ...prev, id_number: 'ID Number is required' }));
@@ -637,30 +681,33 @@ export default function AuthPage() {
   };
 
   const inputClass = "flex-1 py-2 px-3 bg-[#fafafa] rounded-r-lg outline-none text-sm border border-gray-300 focus:border-[#1B5E20] focus:ring-1 focus:ring-[#1B5E20] disabled:opacity-50";
-  const selectClass = "flex-1 py-2 px-3 bg-[#fafafa] rounded-r-lg outline-none text-sm border border-gray-300 focus:border-[#1B5E20] focus:ring-1 focus:ring-[#1B5E20] max-h-40 overflow-y-auto disabled:opacity-50 truncate";
-  const iconClass = "text-gray-400 p-2 bg-[#fafafa] rounded-l-lg";
+  const selectClass = "min-w-0 flex-1 py-2 px-3 bg-[#fafafa] rounded-r-lg outline-none text-sm border border-gray-300 focus:border-[#1B5E20] focus:ring-1 focus:ring-[#1B5E20] disabled:opacity-50";
+  const courseSelectClass = `${selectClass} truncate`;
+  const iconClass = "shrink-0 text-gray-400 p-2 bg-[#fafafa] rounded-l-lg";
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-start bg-gradient-to-b from-white to-[#F1F8E9] text-gray-800 py-8 px-4">
-      <div className="w-full max-w-md text-center">
-        <img src={SCHOOL.logo} alt={`${SCHOOL.shortName} Logo`} className="w-24 h-24 mx-auto mb-3 rounded-full border-2 border-green-100 shadow-sm bg-white object-cover" onError={(e)=>{e.target.src=SCHOOL.logoFallback}} />
-        <h1 className="text-3xl font-extrabold bg-gradient-to-r from-[#1B5E20] to-[#F9A825] bg-clip-text text-transparent">{SCHOOL.systemName}</h1>
-        <p className="text-[#1B5E20] font-medium mb-1">{SCHOOL.subtitle}</p>
-        <p className="text-xs text-gray-500 mb-6">{SCHOOL.fullName}</p>
+    <div className="min-h-screen overflow-hidden bg-gradient-to-b from-white via-[#F9FBE7] to-[#F1F8E9] px-4 py-8 text-gray-800 sm:py-10">
+      <Toast type={toast?.type} message={toast?.message} onDismiss={() => setToast(null)} />
+      <div className="mx-auto flex w-full max-w-md flex-col items-center">
+      <div className="w-full text-center">
+        <img src={SCHOOL.logo} alt={`${SCHOOL.shortName} Logo`} className="mx-auto mb-4 h-32 w-32 object-contain sm:h-36 sm:w-36" onError={(e)=>{e.target.src=SCHOOL.logoFallback}} />
+        <h1 className="text-4xl font-black leading-tight tracking-tight sm:text-5xl"><span className="text-[#2E7D32]">TRAC</span>{" "}<span className="text-[#F9A825]">REQUEST</span></h1>
+        <p className="mb-1 mt-3 text-base font-semibold leading-relaxed text-[#33691E] sm:text-lg">{SCHOOL.subtitle}</p>
+
       </div>
 
-      <div className="w-full max-w-md bg-white rounded-2xl ring-1 ring-green-100 p-6 mb-6 shadow-sm">
+      <div className="mt-7 w-full max-w-md rounded-2xl border border-[#DCE8D2] bg-white p-6 shadow-lg shadow-[#33691E]/10 sm:p-7">
         <div className="flex bg-[#F1F8E9] rounded-full p-1 mb-5">
           <button
             onClick={() => { setIsSignUp(false); resetForm(); }}
-            className={`flex-1 py-2 text-sm font-semibold rounded-full transition ${!isSignUp ? "bg-white shadow text-[#1B5E20]" : "text-gray-500"}`}
+            className={`flex-1 rounded-full py-2 text-sm font-semibold transition ${!isSignUp ? "trac-button shadow" : "text-gray-500 hover:text-[#1B5E20]"}`}
             disabled={isLoading}
           >
             Sign In
           </button>
           <button
             onClick={() => { setIsSignUp(true); resetForm(); }}
-            className={`flex-1 py-2 text-sm font-semibold rounded-full transition ${isSignUp ? "bg-white shadow text-[#1B5E20]" : "text-gray-500"}`}
+            className={`flex-1 rounded-full py-2 text-sm font-semibold transition ${isSignUp ? "trac-button shadow" : "text-gray-500 hover:text-[#1B5E20]"}`}
             disabled={isLoading}
           >
             Sign Up
@@ -672,6 +719,11 @@ export default function AuthPage() {
 
         {isSignUp ? (
           <form onSubmit={handleSignUp} className="space-y-4">
+            {academicCatalogError && (
+              <div role="alert" className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                {academicCatalogError}
+              </div>
+            )}
             <div className="mt-6 flex justify-center gap-6">
               {["student", "alumni"].map((r) => (
                 <label key={r} className="flex items-center gap-2 cursor-pointer">
@@ -742,24 +794,74 @@ export default function AuthPage() {
               </div>
             )}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Institute / Department</label>
-              <div className="flex items-center mt-1">
-                <FaBuilding className={iconClass} />
-                <select value={formData.department} onChange={handleDepartmentChange} onBlur={() => validateField('department', formData.department)} className={selectClass} disabled={isLoading} required>
-                  <option value="" disabled>Select Institute</option>
-                  {departments.map((d) => (<option key={d.code} value={d.code}>{d.name}</option>))}
-                </select>
-              </div>
-              {errors.department && <p className="text-xs text-red-600 mt-1">{errors.department}</p>}
-            </div>
+          <div className="w-full">
+  <label
+    htmlFor="department"
+    className="block text-sm font-medium text-gray-700 mb-1"
+  >
+    Institute / Department
+  </label>
 
+  <div className="relative w-full">
+    {/* Building Icon */}
+    <FaBuilding
+      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+      size={16}
+    />
+
+    {/* Department Dropdown */}
+    <select
+      id="department"
+      value={formData.department}
+      onChange={handleDepartmentChange}
+      onBlur={() =>
+        validateField("department", formData.department)
+      }
+      disabled={isLoading || academicCatalogLoading || Boolean(academicCatalogError)}
+      required
+      className="
+        w-full
+        h-10
+        rounded-md
+        border border-gray-300
+        bg-white
+        pl-10
+        pr-10
+        text-sm
+        text-gray-700
+        outline-none
+        transition
+        focus:border-blue-500
+        focus:ring-2
+        focus:ring-blue-100
+        disabled:bg-gray-100
+        disabled:cursor-not-allowed
+      "
+    >
+      <option value="" disabled>
+        {academicCatalogLoading ? 'Loading institutes...' : 'Select Institute'}
+      </option>
+
+              {departments.map((d) => (
+        <option key={d.code} value={d.code}>
+          {d.name}
+        </option>
+      ))}
+    </select>
+  </div>
+
+  {errors.department && (
+    <p className="mt-1 text-xs text-red-600">
+      {errors.department}
+    </p>
+  )}
+</div>
             <div>
               <label className="block text-sm font-medium text-gray-700">Course / Program</label>
-              <div className="flex items-center mt-1">
+              <div className="flex min-w-0 items-center mt-1">
                 <FaBookOpen className={iconClass} />
-                <select value={formData.course} onChange={handleCourseChange} onBlur={() => validateField('course', formData.course)} className={selectClass} disabled={isLoading || !formData.department} required>
-                  <option value="" disabled>Select Course</option>
+                <select value={formData.course} onChange={handleCourseChange} onBlur={() => validateField('course', formData.course)} className={courseSelectClass} disabled={isLoading || academicCatalogLoading || Boolean(academicCatalogError) || !formData.department} required>
+                  <option value="" disabled>{academicCatalogLoading ? 'Loading courses...' : 'Select Course'}</option>
                   {formData.department && departmentCourseMap[formData.department]?.map((c) => (<option key={c} value={c}>{c}</option>))}
                 </select>
               </div>
@@ -781,7 +883,7 @@ export default function AuthPage() {
               <div className="flex items-center mt-1">
                 <FaLock className={iconClass} />
                 <input type={showPassword.password ? "text" : "password"} value={formData.password} onChange={(e) => handleInputChange('password', e.target.value)} onBlur={() => validateField('password', formData.password)} placeholder="Create a strong password" className={inputClass} disabled={isLoading} required />
-                <button type="button" onClick={() => handlePasswordVisibility('password')} className="ml-2 text-gray-500" disabled={isLoading}>{showPassword.password ? <FaEyeSlash /> : <FaEye />}</button>
+                <button type="button" onClick={() => handlePasswordVisibility('password')} className="trac-button-outline ml-2 flex min-h-10 min-w-10 items-center justify-center rounded-lg text-gray-500" disabled={isLoading} aria-label={showPassword.password ? 'Hide password' : 'Show password'}>{showPassword.password ? <FaEyeSlash /> : <FaEye />}</button>
               </div>
               {isSignUp && formData.password && <PasswordRequirements password={formData.password} />}
               {errors.password && <p className="text-xs text-red-600 mt-1">{errors.password}</p>}
@@ -792,12 +894,12 @@ export default function AuthPage() {
               <div className="flex items-center mt-1">
                 <FaLock className={iconClass} />
                 <input type={showPassword.confirmPassword ? "text" : "password"} value={formData.confirmPassword} onChange={(e) => handleInputChange('confirmPassword', e.target.value)} onBlur={() => validateField('confirmPassword', formData.confirmPassword)} placeholder="Re-enter your password" className={inputClass} disabled={isLoading} required />
-                <button type="button" onClick={() => handlePasswordVisibility('confirmPassword')} className="ml-2 text-gray-500" disabled={isLoading}>{showPassword.confirmPassword ? <FaEyeSlash /> : <FaEye />}</button>
+                <button type="button" onClick={() => handlePasswordVisibility('confirmPassword')} className="trac-button-outline ml-2 flex min-h-10 min-w-10 items-center justify-center rounded-lg text-gray-500" disabled={isLoading} aria-label={showPassword.confirmPassword ? 'Hide password' : 'Show password'}>{showPassword.confirmPassword ? <FaEyeSlash /> : <FaEye />}</button>
               </div>
               {errors.confirmPassword && <p className="text-xs text-red-600 mt-1">{errors.confirmPassword}</p>}
             </div>
 
-            <button type="submit" disabled={isLoading} className={`w-full py-3 mt-1 rounded-xl bg-gradient-to-r from-[#1B5E20] to-[#2E7D32] text-white font-semibold shadow-md hover:shadow-lg transition ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+            <button type="submit" disabled={isLoading || academicCatalogLoading || Boolean(academicCatalogError)} className="trac-button mt-1 w-full rounded-xl py-3 font-semibold">
               {isLoading ? <span className="flex items-center justify-center"><svg className="animate-spin h-4 w-4 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Creating Account...</span> : 'Sign Up'}
             </button>
           </form>
@@ -827,7 +929,7 @@ export default function AuthPage() {
               </label>
             </div>
 
-            <button type="submit" disabled={isLoading} className={`w-full py-3 rounded-xl bg-gradient-to-r from-[#1B5E20] to-[#2E7D32] text-white font-semibold shadow-md hover:shadow-lg transition ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+            <button type="submit" disabled={isLoading} className="trac-button w-full rounded-xl py-3 font-semibold">
               {isLoading ? <span className="flex items-center justify-center"><svg className="animate-spin h-4 w-4 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Logging in...</span> : 'Login'}
             </button>
 
@@ -838,11 +940,7 @@ export default function AuthPage() {
         )}
       </div>
 
-      <div className="w-full max-w-md text-center">
-        <p className="text-xs text-gray-500">© 2026 <span className="font-semibold text-gray-700">{SCHOOL.fullName}</span></p>
-        <p className="text-xs text-gray-400 mt-0.5">{SCHOOL.footer.location}</p>
-        <p className="text-[10px] text-gray-400 mt-2">Programs: BSIT, BSIS, BSCRIM, BTVTED, BTLED, BSHM, BSHRRM, BSHT, BSA, BSF, BSAB, MAEd, MSA, MSAgEd, MSAg.Mgt.</p>
-      </div>
+
 
       {showForgotPassword && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
@@ -864,8 +962,8 @@ export default function AuthPage() {
                   </div>
                   {forgotError && <div className="bg-red-50 border border-red-200 rounded-lg p-3"><p className="text-sm text-red-600 text-center">{forgotError}</p></div>}
                   <div className="flex gap-3">
-                    <button type="button" onClick={resetForgotPassword} className="flex-1 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition" disabled={isLoading}>Cancel</button>
-                    <button onClick={handleForgotPassword} disabled={isLoading || !forgotEmail} className="flex-1 py-3 bg-gradient-to-r from-[#1B5E20] to-[#2E7D32] text-white rounded-lg font-medium hover:opacity-90 transition disabled:opacity-50">{isLoading ? 'Sending...' : 'Send Code'}</button>
+                    <button type="button" onClick={resetForgotPassword} className="trac-button-outline flex-1 rounded-lg py-3 font-medium" disabled={isLoading}>Cancel</button>
+                    <button onClick={handleForgotPassword} disabled={isLoading || !forgotEmail} className="trac-button flex-1 rounded-lg py-3 font-medium">{isLoading ? 'Sending...' : 'Send Code'}</button>
                   </div>
                 </div>
               ) : showEnterCode ? (
@@ -888,8 +986,8 @@ export default function AuthPage() {
                     {canResend ? <button onClick={handleResendCode} disabled={isLoading} className="text-[#1B5E20] font-medium hover:underline">Resend Code</button> : <p className="text-sm text-gray-500">Resend available in {resendTimer} seconds</p>}
                   </div>
                   <div className="flex gap-3 pt-2">
-                    <button type="button" onClick={() => { setForgotSubmitted(false); setShowEnterCode(false); setVerificationCode(["", "", "", "", "", ""]); }} className="flex-1 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition" disabled={isLoading}>Back</button>
-                    <button onClick={handleVerifyCode} disabled={isLoading || verificationCode.join('').length !== 6} className="flex-1 py-3 bg-gradient-to-r from-[#1B5E20] to-[#2E7D32] text-white rounded-lg font-medium hover:opacity-90 transition disabled:opacity-50">{isLoading ? 'Verifying...' : 'Verify Code'}</button>
+                    <button type="button" onClick={() => { setForgotSubmitted(false); setShowEnterCode(false); setVerificationCode(["", "", "", "", "", ""]); }} className="trac-button-outline flex-1 rounded-lg py-3 font-medium" disabled={isLoading}>Back</button>
+                    <button onClick={handleVerifyCode} disabled={isLoading || verificationCode.join('').length !== 6} className="trac-button flex-1 rounded-lg py-3 font-medium">{isLoading ? 'Verifying...' : 'Verify Code'}</button>
                   </div>
                 </div>
               ) : showResetPassword ? (
@@ -898,14 +996,14 @@ export default function AuthPage() {
                   {resetError && <div className="bg-red-50 border border-red-200 rounded-lg p-3"><p className="text-sm text-red-600 text-center">{resetError}</p></div>}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">New Password</label>
-                    <div className="relative"><input type={showNewPassword ? "text" : "password"} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Enter new password" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1B5E20] outline-none" autoFocus /><button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">{showNewPassword ? <FaEyeSlash /> : <FaEye />}</button></div>
+                    <div className="relative"><input type={showNewPassword ? "text" : "password"} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Enter new password" className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none focus:ring-2 focus:ring-[#1B5E20]" autoFocus /><button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="trac-button-outline absolute right-2 top-1/2 flex min-h-9 min-w-9 -translate-y-1/2 items-center justify-center rounded-md text-gray-500" aria-label={showNewPassword ? 'Hide password' : 'Show password'}>{showNewPassword ? <FaEyeSlash /> : <FaEye />}</button></div>
                     <p className="text-xs text-gray-500 mt-1">At least 8 characters with uppercase, lowercase, number, and special character</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Confirm New Password</label>
-                    <div className="relative"><input type={showConfirmNewPassword ? "text" : "password"} value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} placeholder="Confirm new password" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1B5E20] outline-none" /><button type="button" onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">{showConfirmNewPassword ? <FaEyeSlash /> : <FaEye />}</button></div>
+                    <div className="relative"><input type={showConfirmNewPassword ? "text" : "password"} value={confirmNewPassword} onChange={(e) => setConfirmNewPassword(e.target.value)} placeholder="Confirm new password" className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none focus:ring-2 focus:ring-[#1B5E20]" /><button type="button" onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)} className="trac-button-outline absolute right-2 top-1/2 flex min-h-9 min-w-9 -translate-y-1/2 items-center justify-center rounded-md text-gray-500" aria-label={showConfirmNewPassword ? 'Hide password' : 'Show password'}>{showConfirmNewPassword ? <FaEyeSlash /> : <FaEye />}</button></div>
                   </div>
-                  <button onClick={handleResetPassword} disabled={isLoading} className="w-full py-3 bg-gradient-to-r from-[#1B5E20] to-[#2E7D32] text-white rounded-lg font-medium hover:opacity-90 transition disabled:opacity-50">{isLoading ? 'Resetting...' : 'Reset Password'}</button>
+                  <button onClick={handleResetPassword} disabled={isLoading} className="trac-button w-full rounded-lg py-3 font-medium">{isLoading ? 'Resetting...' : 'Reset Password'}</button>
                 </div>
               ) : null}
             </div>
@@ -926,12 +1024,13 @@ export default function AuthPage() {
                 {[0, 1, 2, 3, 4, 5].map((index) => (<input key={index} id={`verify-${index}`} type="text" inputMode="numeric" pattern="[0-9]*" maxLength="1" value={verificationCodeInput[index]} onChange={(e) => { const newCode = [...verificationCodeInput]; newCode[index] = e.target.value.replace(/\D/g, ''); setVerificationCodeInput(newCode); if (e.target.value && index < 5) { document.getElementById(`verify-${index + 1}`)?.focus(); } if (verificationError) setVerificationError(''); }} onKeyDown={(e) => { if (e.key === 'Backspace' && !verificationCodeInput[index] && index > 0) { document.getElementById(`verify-${index - 1}`)?.focus(); } }} className="w-12 h-12 text-center text-xl font-bold border-2 border-gray-300 rounded-lg focus:border-[#1B5E20] focus:ring-2 focus:ring-[#1B5E20] outline-none" disabled={isLoading} />))}
               </div>
               {verificationError && <p className="text-red-600 text-sm text-center mb-4">{verificationError}</p>}
-              <button onClick={handleVerifyEmail} disabled={isLoading || verificationCodeInput.join('').length !== 6} className="w-full py-3 bg-gradient-to-r from-[#1B5E20] to-[#2E7D32] text-white rounded-lg font-medium hover:opacity-90 transition disabled:opacity-50">{isLoading ? 'Verifying...' : 'Verify Email'}</button>
+              <button onClick={handleVerifyEmail} disabled={isLoading || verificationCodeInput.join('').length !== 6} className="trac-button w-full rounded-lg py-3 font-medium">{isLoading ? 'Verifying...' : 'Verify Email'}</button>
               <div className="text-center mt-4"><p className="text-sm text-gray-600">Didn't receive code? {verificationCanResend ? <button onClick={handleResendVerification} className="text-[#1B5E20] font-medium hover:underline">Resend Code</button> : <span className="text-gray-400">Resend available in {verificationResendTimer}s</span>}</p></div>
             </div>
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

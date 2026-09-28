@@ -1,7 +1,7 @@
 /**
  * TRAC REQUEST - Centralized Configuration
  * Tawi-Tawi Regional Agricultural College
- * 
+ *
  * v1: Reuses MSU-TCTO queue/auth/status workflow
  * All school-specific constants are configurable here
  * Future enhancements: fee formulas, richer policy rules
@@ -14,21 +14,21 @@ export const SCHOOL = {
   shortName: "TRAC",
   systemName: "TRAC REQUEST",
   fullName: "Tawi-Tawi Regional Agricultural College",
-  subtitle: "Registrar Queuing System with Notification",
-  logo: "/TRAC_Logo.png",
-  logoFallback: "/Msu-Tcto_Logo.jpg",
+  subtitle: "Online Request and Tracking with Email Notifications",
+  logo: "/TracLogo.png",
+  logoFallback: "/TracLogo.png",
   footer: {
     copyright: "Tawi-Tawi Regional Agricultural College",
     campus: "Tawi-Tawi Regional Agricultural College",
-    location: "Sanga-Sanga, Bongao, Tawi-Tawi",
+    location: "Nalil, Bongao, Tawi-Tawi",
     shortLocation: "Bongao, Tawi-Tawi",
   },
   contact: {
     email: "registrar@trac.edu.ph",
     altEmail: "registraroffice@trac.edu.ph",
     phone: "(068) 123-4567",
-    location: "Registrar Office, TRAC, Sanga-Sanga, Bongao Tawi-Tawi",
-    officeLocation: "Office of the Campus Registrar, TRAC, Sanga-Sanga, Bongao, Tawi-Tawi 7500",
+    location: "Registrar Office, TRAC, Nalil, Bongao Tawi-Tawi",
+    officeLocation: "Office of the Campus Registrar, TRAC, Nalil, Bongao, Tawi-Tawi 7500",
   }
 };
 
@@ -42,20 +42,20 @@ export const THEME = {
   primaryLight: "#2E7D32",
   primaryLighter: "#388E3C",
   primaryExtraLight: "#43A047",
-  
+
   // Secondary - Harvest Gold / Amber
   secondary: "#F9A825",
   secondaryDark: "#F57F17",
   secondaryLight: "#FBC02D",
   secondaryLighter: "#FDD835",
-  
+
   // Accent & Neutrals
   accent: "#33691E",
   accentLight: "#558B2F",
   background: "#F1F8E9",
   backgroundLight: "#F9FBE7",
   surface: "#FFFFFF",
-  
+
   // Legacy mapping for easy migration from MSU colors
   // Old: #7A0019 (maroon) -> new primary green
   // Old: #0038A8 (blue) -> new primary light / accent
@@ -67,7 +67,7 @@ export const THEME = {
     maroonGradient: "#7A0019", // kept for reference
     blueGradient: "#0038A8",
   },
-  
+
   // Gradients - TRAC Green to Gold
   gradients: {
     primaryToSecondary: "from-[#1B5E20] to-[#F9A825]",
@@ -83,7 +83,7 @@ export const THEME = {
     background: "from-white to-[#F1F8E9]",
     backgroundStrong: "from-[#F1F8E9] to-[#DCEDC8]",
   },
-  
+
   // For Tailwind CSS variables
   cssVariables: {
     "--trac-primary": "#1B5E20",
@@ -191,7 +191,7 @@ export const DEPARTMENTS = PROGRAMS.institutes.map(inst => ({
 }));
 
 // Flat course list for dropdowns
-export const ALL_COURSES = PROGRAMS.institutes.flatMap(inst => 
+export const ALL_COURSES = PROGRAMS.institutes.flatMap(inst =>
   inst.programs.map(p => p.name)
 );
 
@@ -208,277 +208,6 @@ export const DEPARTMENT_COURSE_MAP = {};
 PROGRAMS.institutes.forEach(inst => {
   DEPARTMENT_COURSE_MAP[inst.code] = inst.programs.map(p => p.name);
 });
-
-// ============================================================
-// DOCUMENTS & FORMS - With TRAC Fees
-// ============================================================
-export const DOCUMENT_FEES = {
-  // From user provided fee table
-  "Transcript of Records (TOR)": 100, // per page
-  "Certificate of Registration (COR)": 20,
-  "Certificate of Grades (COG)": 20,
-  "General Weighted Average (GWA)": 70,
-  "Certification, Authentication, and Verification (CAV)": 50,
-  "Incomplete (INC) Form": 15, // per subject
-  "Golden Seal": 30,
-  "Documentary Stamp": 50,
-  "Honorable Dismissal": 50,
-  "Requesting Form": 20,
-  
-  // Legacy / Extended for compatibility
-  "Authentication": 50,
-  "Transfer Credential/Honorable Dismissal": 50,
-  "Report of Grade (ROG)": 20,
-  "Evaluation of Grades": 20,
-  "Reprinting Fee and (Grade)": 20,
-  "Certificate of Grade by semester Reprinting": 20,
-  "Certification": 50,
-  "CAV": 50,
-  "University Clearance Form": 20,
-  "INC Form": 15,
-  "Advance Credit/s Form and Substitution Form": 20,
-  "Application for Graduation Form": 20,
-};
-
-export const DOCUMENTS = [
-  // Alumni Documents
-  { 
-    name: "Transcript of Records (TOR)", 
-    label: "Transcript of Records (TOR)",
-    category: "Document",
-    fee: 100,
-    feeDisplay: "₱100 per page",
-    feePerPage: true,
-    processing_days: 6,
-    allowedRoles: ["student", "alumni"],
-    requires: ["Bound thesis", "Diploma", "Permanent Record"],
-    process: ["Proceed to respective department for clearance", "Library clearance", "Cashier", "Registrar's Office", "Return to cashier if required", "Wait for release"],
-  },
-  { 
-    name: "Certificate of Registration (COR)", 
-    label: "Certificate of Registration (COR)",
-    category: "Document",
-    fee: 20,
-    feeDisplay: "₱20",
-    processing_days: 1,
-    allowedRoles: ["student", "alumni"],
-    process: ["Obtain Official Receipt (OR) from Cashier", "Proceed to Registrar for processing", "Wait for release"],
-  },
-  { 
-    name: "Certificate of Grades (COG)", 
-    label: "Certificate of Grades (COG)",
-    category: "Document",
-    fee: 20,
-    feeDisplay: "₱20",
-    processing_days: 1,
-    allowedRoles: ["student", "alumni"],
-    process: ["Obtain Evaluation Form from department", "Fill out completely", "Bring green form to cashier and pay", "Return to Registrar and submit", "Wait for release"],
-  },
-  { 
-    name: "General Weighted Average (GWA)", 
-    label: "General Weighted Average (GWA)",
-    category: "Document",
-    fee: 70,
-    feeDisplay: "₱70",
-    processing_days: 2,
-    allowedRoles: ["student", "alumni"],
-    process: ["Same as COR process"],
-  },
-  { 
-    name: "Certification, Authentication, and Verification (CAV)", 
-    label: "Certification, Authentication, and Verification (CAV)",
-    category: "Document",
-    fee: 50,
-    feeDisplay: "₱50",
-    processing_days: 2,
-    allowedRoles: ["alumni"],
-    process: ["Same as COR process"],
-  },
-  { 
-    name: "CAV", 
-    label: "CAV - Certification, Authentication, and Verification",
-    category: "Document",
-    fee: 50,
-    feeDisplay: "₱50",
-    processing_days: 2,
-    allowedRoles: ["alumni"],
-  },
-  { 
-    name: "Authentication", 
-    label: "Authentication",
-    category: "Document",
-    fee: 50,
-    feeDisplay: "₱50",
-    processing_days: 2,
-    allowedRoles: ["alumni"],
-  },
-  { 
-    name: "Diploma", 
-    label: "Diploma (Certified True Copy)",
-    category: "Document",
-    fee: 50,
-    feeDisplay: "₱50",
-    processing_days: 3,
-    allowedRoles: ["alumni"],
-  },
-  { 
-    name: "Certification", 
-    label: "Certification",
-    category: "Document",
-    fee: 50,
-    feeDisplay: "₱50",
-    processing_days: 2,
-    allowedRoles: ["student", "alumni"],
-  },
-  { 
-    name: "Report of Grade (ROG)", 
-    label: "Report of Grade (ROG)",
-    category: "Document",
-    fee: 20,
-    feeDisplay: "₱20",
-    processing_days: 1,
-    allowedRoles: ["student"],
-  },
-  { 
-    name: "Evaluation of Grades", 
-    label: "Evaluation of Grades",
-    category: "Document",
-    fee: 20,
-    feeDisplay: "₱20",
-    processing_days: 1,
-    allowedRoles: ["student"],
-  },
-];
-
-export const FORMS = [
-  { 
-    name: "Incomplete (INC) Form", 
-    label: "Incomplete (INC) Form",
-    category: "Form",
-    fee: 15,
-    feeDisplay: "₱15 per subject",
-    feePerSubject: true,
-    processing_days: 1,
-    allowedRoles: ["student"],
-    allowsMultiple: true,
-    multipleLabel: "subject",
-    notes: "Can be released immediately because form is pre-printed. Same as COR process.",
-  },
-  { 
-    name: "INC Form", 
-    label: "INC Form",
-    category: "Form",
-    fee: 15,
-    feeDisplay: "₱15 per subject",
-    processing_days: 1,
-    allowedRoles: ["student"],
-    allowsMultiple: true,
-    multipleLabel: "subject",
-  },
-  { 
-    name: "Shifting Form", 
-    label: "Shifting Form",
-    category: "Form",
-    fee: 20,
-    feeDisplay: "₱20",
-    processing_days: 1,
-    allowedRoles: ["student"],
-    process: ["Obtain Shifting Form and Evaluation Form from current department", "Complete required info and signatures", "Submit to department where student wishes to shift"],
-  },
-  { 
-    name: "Adding Form / Adding Subject Form", 
-    label: "Adding Form / Adding Subject Form",
-    category: "Form",
-    fee: 20,
-    feeDisplay: "₱20",
-    processing_days: 1,
-    allowedRoles: ["student"],
-    process: ["Obtain Adding Form from Registrar", "Fill out completely", "Proceed to faculty in charge of subject", "Have required approval/signature completed"],
-  },
-  { 
-    name: "University Clearance Form", 
-    label: "University Clearance Form",
-    category: "Form",
-    fee: 20,
-    feeDisplay: "₱20",
-    processing_days: 1,
-    allowedRoles: ["student", "alumni"],
-  },
-  { 
-    name: "Honorable Dismissal", 
-    label: "Honorable Dismissal",
-    category: "Form",
-    fee: 50,
-    feeDisplay: "₱50",
-    processing_days: 3,
-    allowedRoles: ["student", "alumni"],
-    process: ["Obtain OR from Cashier", "Proceed to appropriate department", "Follow department processing requirements"],
-  },
-  { 
-    name: "Transfer Credential/Honorable Dismissal", 
-    label: "Transfer Credential / Honorable Dismissal",
-    category: "Form",
-    fee: 50,
-    feeDisplay: "₱50",
-    processing_days: 3,
-    allowedRoles: ["student", "alumni"],
-  },
-  { 
-    name: "Requesting Form", 
-    label: "Requesting Form",
-    category: "Form",
-    fee: 20,
-    feeDisplay: "₱20",
-    processing_days: 1,
-    allowedRoles: ["student", "alumni"],
-  },
-  { 
-    name: "Application for Graduation Form", 
-    label: "Application for Graduation Form",
-    category: "Form",
-    fee: 20,
-    feeDisplay: "₱20",
-    processing_days: 1,
-    allowedRoles: ["student"],
-  },
-  { 
-    name: "Advance Credit/s Form and Substitution Form", 
-    label: "Advance Credit/s Form and Substitution Form",
-    category: "Form",
-    fee: 20,
-    feeDisplay: "₱20",
-    processing_days: 1,
-    allowedRoles: ["student"],
-  },
-  // Additional fees as documents
-  { 
-    name: "Golden Seal", 
-    label: "Golden Seal",
-    category: "Add-on",
-    fee: 30,
-    feeDisplay: "₱30",
-    processing_days: 0,
-    allowedRoles: ["student", "alumni"],
-  },
-  { 
-    name: "Documentary Stamp", 
-    label: "Documentary Stamp",
-    category: "Add-on",
-    fee: 50,
-    feeDisplay: "₱50",
-    processing_days: 0,
-    allowedRoles: ["student", "alumni"],
-  },
-];
-
-// Combined for dynamic settings fallback
-export const ALL_DOCUMENT_SETTINGS = [...DOCUMENTS, ...FORMS].map(doc => ({
-  name: doc.name,
-  category: doc.category,
-  fee: doc.fee,
-  processing_days: doc.processing_days,
-  allowedRoles: doc.allowedRoles,
-}));
 
 // ============================================================
 // MANUAL PROCESS DOCUMENTATION
@@ -572,9 +301,11 @@ export const ABBREVIATIONS = {
 // ============================================================
 // API & SYSTEM SETTINGS (Keep workflow same as MSU for v1)
 // ============================================================
+const API_BASE_URL = import.meta.env.VITE_API_URL;
+
 export const SYSTEM = {
   // Keep same queue/auth/status workflow for v1
-  apiBaseUrl: "http://localhost:5000/api",
+  apiBaseUrl: API_BASE_URL,
   auth: {
     idFormat: "00-00000",
     idRegex: /^\d{7}$/,
@@ -609,10 +340,6 @@ const TRAC_CONFIG = {
   allCourses: ALL_COURSES,
   courseDepartmentMap: COURSE_DEPARTMENT_MAP,
   departmentCourseMap: DEPARTMENT_COURSE_MAP,
-  documents: DOCUMENTS,
-  forms: FORMS,
-  documentFees: DOCUMENT_FEES,
-  allDocumentSettings: ALL_DOCUMENT_SETTINGS,
   manualProcesses: MANUAL_PROCESSES,
   abbreviations: ABBREVIATIONS,
   system: SYSTEM,

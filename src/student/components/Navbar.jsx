@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { FaSignOutAlt, FaArrowLeft, FaUserCircle } from "react-icons/fa";
 import { SCHOOL, THEME } from "../../config/trac.config";
@@ -7,6 +7,39 @@ export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState('');
+
+  useEffect(() => {
+    const loadAvatar = () => {
+      try {
+        const storedUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+        const user = storedUser.user || storedUser;
+        setAvatarUrl(user.avatar_url || '');
+      } catch {
+        setAvatarUrl('');
+      }
+    };
+
+    loadAvatar();
+    window.addEventListener('auth-changed', loadAvatar);
+    return () => window.removeEventListener('auth-changed', loadAvatar);
+  }, []);
+
+  useEffect(() => {
+    if (!showLogoutConfirm) return undefined;
+
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') setShowLogoutConfirm(false);
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [showLogoutConfirm]);
 
   const isDashboard = location.pathname === "/dashboard";
 
@@ -33,15 +66,15 @@ export default function Navbar() {
   return (
     <>
       {/* Header */}
-      <header className="bg-white border-b border-green-100 shadow-sm w-full z-40">
-        <div className="max-w-5xl mx-auto flex items-center justify-between p-3 sm:p-4 px-4 sm:px-6">
-          
+      <header className="sticky top-0 z-40 w-full border-b border-green-100 bg-white shadow-sm">
+        <div className="mx-auto flex min-w-0 max-w-5xl items-center justify-between px-3 py-3 sm:px-6 sm:py-4">
+
           {/* LEFT: Back Button + Logo + Title */}
-          <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
             {showBackButton && (
               <button
                 onClick={() => navigate(-1)}
-                className="flex-shrink-0 flex items-center justify-center bg-green-50 text-[#1B5E20] w-9 h-9 rounded-full hover:bg-[#1B5E20] hover:text-white transition-all duration-200"
+                className="trac-button-outline flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full transition-all duration-200"
                 aria-label="Back"
               >
                 <FaArrowLeft />
@@ -50,25 +83,25 @@ export default function Navbar() {
 
             <button
               onClick={handleLogoClick}
-              className="flex-shrink-0 transition-transform hover:scale-105 active:scale-95 focus:outline-none"
+              className="flex min-h-11 min-w-11 shrink-0 items-center justify-center transition-transform hover:scale-105 active:scale-95 focus:outline-none"
               aria-label="Go to Dashboard"
               title="Go to Dashboard"
             >
               <img
                 src={SCHOOL.logo}
                 alt={`${SCHOOL.shortName} Logo`}
-                className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover shadow-sm border border-green-100 bg-white cursor-pointer"
+                className="h-10 w-10 cursor-pointer rounded-full border border-green-100 bg-white object-cover shadow-sm sm:h-12 sm:w-12"
                 onError={(e) => { e.target.src = SCHOOL.logoFallback; }}
               />
             </button>
 
             <button
               onClick={handleLogoClick}
-              className="flex-1 text-left focus:outline-none"
+              className="min-w-0 flex-1 text-left focus:outline-none"
               aria-label="Go to Dashboard"
             >
-              <h1 className="text-base sm:text-xl font-black text-[#1B5E20] leading-tight tracking-tight hover:text-[#2E7D32] transition-colors">
-                {SCHOOL.shortName}-{SCHOOL.systemName.split(' ')[1] || 'REQUEST'}
+                <h1 className="truncate bg-gradient-to-r from-[#1B5E20] to-[#F9A825] bg-clip-text text-sm font-black leading-tight tracking-tight text-transparent sm:text-xl">
+                {SCHOOL.systemName}
               </h1>
               <p className="text-[9px] sm:text-xs text-gray-500 font-medium uppercase tracking-wider leading-tight hidden sm:block">
                 {SCHOOL.subtitle}
@@ -80,23 +113,27 @@ export default function Navbar() {
           </div>
 
           {/* RIGHT: Profile & Logout */}
-          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
             {isDashboard && (
               <>
                 <button
                   onClick={() => navigate("/profile")}
                   title="Profile"
-                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-green-50 text-[#1B5E20] flex items-center justify-center hover:bg-[#1B5E20] hover:text-white transition-all border border-green-100"
+                  className="trac-button-outline flex min-h-11 min-w-11 items-center justify-center rounded-full transition-all"
                 >
-                  <FaUserCircle className="text-xl sm:text-2xl" />
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt="Profile" className="h-8 w-8 rounded-full object-cover sm:h-9 sm:w-9" />
+                  ) : (
+                    <FaUserCircle className="text-xl sm:text-2xl" />
+                  )}
                 </button>
-                
+
                 <button
                   onClick={handleLogout}
-                  className="flex items-center gap-2 bg-[#1B5E20] text-white px-3 sm:px-5 py-2 rounded-xl font-bold hover:bg-[#0D3B10] hover:shadow-lg transition-all text-xs sm:text-sm"
+                  className="trac-button flex min-h-11 items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold sm:px-5 sm:text-sm"
                 >
                   <FaSignOutAlt className="text-sm" />
-                  <span className="hidden xs:inline">Logout</span>
+                  <span className="hidden sm:inline">Logout</span>
                 </button>
               </>
             )}
@@ -104,9 +141,13 @@ export default function Navbar() {
               <button
                 onClick={() => navigate("/profile")}
                 title="Profile"
-                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-green-50 text-[#1B5E20] flex items-center justify-center hover:bg-[#1B5E20] hover:text-white transition-all border border-green-100"
+                className="trac-button-outline flex min-h-11 min-w-11 items-center justify-center rounded-full transition-all"
               >
-                <FaUserCircle className="text-xl sm:text-2xl" />
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="Profile" className="h-8 w-8 rounded-full object-cover sm:h-9 sm:w-9" />
+                ) : (
+                  <FaUserCircle className="text-xl sm:text-2xl" />
+                )}
               </button>
             )}
           </div>
@@ -115,8 +156,8 @@ export default function Navbar() {
 
       {/* LOGOUT MODAL - TRAC Theme */}
       {showLogoutConfirm && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[100] animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 p-3 backdrop-blur-sm sm:items-center sm:p-4">
+          <div role="dialog" aria-modal="true" aria-labelledby="logout-title" className="max-h-[calc(100vh-2rem)] w-full max-w-sm overflow-y-auto rounded-2xl bg-white shadow-2xl">
             {/* Header with TRAC Gradient */}
             <div className="bg-gradient-to-r from-[#1B5E20] to-[#2E7D32] px-6 py-4">
               <div className="flex items-center justify-center">
@@ -125,19 +166,19 @@ export default function Navbar() {
                 </div>
               </div>
             </div>
-            
+
             <div className="p-6 text-center">
-              <h3 className="text-xl font-bold text-gray-800 mb-2">
+              <h3 id="logout-title" className="mb-2 text-xl font-bold text-gray-800">
                 Confirm Logout
               </h3>
               <p className="text-gray-500 text-sm mb-6">
                 Are you sure you want to sign out of your account?
               </p>
-              
-              <div className="flex gap-3">
+
+              <div className="flex flex-col-reverse gap-3 sm:flex-row">
                 <button
                   onClick={() => setShowLogoutConfirm(false)}
-                  className="flex-1 py-3 px-4 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition font-semibold text-sm"
+                  className="trac-button-outline flex-1 rounded-xl px-4 py-3 text-sm font-semibold"
                 >
                   Cancel
                 </button>

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { 
-  Mail, 
-  MapPin, 
-  Clock, 
-  ChevronDown, 
+import {
+  Mail,
+  MapPin,
+  Clock,
+  ChevronDown,
   ChevronUp,
   FileText,
   CreditCard,
@@ -12,11 +12,14 @@ import {
   Shield,
   Bell
 } from "lucide-react";
-import { SCHOOL, OFFICE, SYSTEM, DOCUMENTS, FORMS } from "../../config/trac.config";
+import { SCHOOL, OFFICE, SYSTEM } from "../../config/trac.config";
 
 export default function FAQ() {
   const [openIndex, setOpenIndex] = useState(null);
   const [contactEmail, setContactEmail] = useState(SCHOOL.contact.email);
+  const [officeHours, setOfficeHours] = useState(OFFICE.schedule.full);
+  const [catalog, setCatalog] = useState([]);
+  const [catalogUnavailable, setCatalogUnavailable] = useState(false);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -25,13 +28,53 @@ export default function FAQ() {
         if (response.ok) {
           const data = await response.json();
           if (data.contact_email) setContactEmail(data.contact_email);
+          if (data.office_hours) setOfficeHours(data.office_hours);
+          setCatalog(Array.isArray(data.document_settings)
+            ? data.document_settings.filter(item => item.active !== false && Array.isArray(item.allowedRoles) && item.allowedRoles.length > 0)
+            : []);
+        } else {
+          setCatalogUnavailable(true);
         }
-      } catch (err) {
+      } catch {
+        setCatalogUnavailable(true);
         console.warn('Using TRAC default contact email');
       }
     };
     fetchSettings();
   }, []);
+
+  const feeDescription = (item) => {
+    const fee = Number(item.fee || 0).toFixed(2);
+    const unit = item.feeUnit || item.fee_unit || 'per_copy';
+    const unitLabel = unit === 'per_page' ? 'per page' : unit === 'per_subject' ? 'per subject' : 'per copy';
+    return `₱${fee} ${unitLabel}`;
+  };
+
+  const catalogGroup = (role, category) => {
+    const items = catalog.filter(item => (item.category === 'Forms' ? 'Form' : item.category) === category && item.allowedRoles.includes(role));
+    const title = `${role === 'student' ? 'Student' : 'Alumni'} ${category.toLowerCase()}s`;
+    return `${title}\n${items.length
+      ? items.map(item => `• ${item.name} – ${feeDescription(item)} | ${item.processing_days} working day(s)`).join('\n')
+      : '• None currently available'}`;
+  };
+
+  const catalogAnswer = catalogUnavailable
+    ? 'The current request catalog could not be loaded. Please check the Request Document page or contact the Registrar’s Office for current availability, fees, and processing times.'
+    : catalog.length
+      ? `You can request the following at ${SCHOOL.shortName}:\n\n${catalogGroup('student', 'Document')}\n\n${catalogGroup('student', 'Form')}\n\n${catalogGroup('alumni', 'Document')}\n\n${catalogGroup('alumni', 'Form')}`
+      : 'The current request catalog is loading. Please check back shortly.';
+
+  const processingAnswer = catalogUnavailable
+    ? 'Current processing times could not be loaded. Please check the Request Document page for the latest information.'
+    : catalog.length
+      ? `Processing times for active requests:\n\n${catalog.map(item => `• ${item.name} – ${item.processing_days} working day(s)`).join('\n')}\n\nProcessing days exclude weekends and holidays. ${OFFICE.processing.note}\n\nOffice Schedule: ${officeHours}\nLunch break: ${OFFICE.schedule.lunchBreak} (closed)`
+      : 'Current processing times are loading. Please check back shortly.';
+
+  const feeAnswer = catalogUnavailable
+    ? 'Current fees could not be loaded. Please check the Request Document page for the latest fee and unit before submitting.'
+    : catalog.length
+      ? `Current fees for active requests:\n\n${catalog.map(item => `• ${item.name}: ${feeDescription(item)}`).join('\n')}\n\nThe request total is calculated from the fee unit and quantity selected on the request form.`
+      : 'Current fees are loading. Please check back shortly.';
 
   const faqList = [
     {
@@ -52,7 +95,7 @@ export default function FAQ() {
         },
         {
           question: "I'm an alumnus of TRAC, how do I register?",
-          answer: `Alumni can register online by:\n1. Selecting 'Alumni' as the role during sign up\n2. Providing their student ID and graduation year\n3. Filling in their institute, course (e.g., BSA, BSF, BSAB, BSIT, etc.), and email address\n4. Creating a secure password\nOnce registered and verified via email, you can request TOR, GWA, CAV, Diploma and other alumni documents.\n\nTRAC Programs for Alumni: BSIT, BSIS, BSCRIM, BTVTED, BTLED, BSHM, BSHRRM, BSHT, BSA, BSF, BSAB, MAEd, MSA, MSAgEd, MSAg.Mgt.`
+          answer: `Alumni can register online by:\n1. Selecting 'Alumni' as the role during sign up\n2. Providing their student ID and graduation year\n3. Filling in their institute, course (e.g., BSA, BSF, BSAB, BSIT, etc.), and email address\n4. Creating a secure password\nOnce registered and verified via email, available documents and forms for alumni appear in the Request Document catalog.\n\nTRAC Programs for Alumni: BSIT, BSIS, BSCRIM, BTVTED, BTLED, BSHM, BSHRRM, BSHT, BSA, BSF, BSAB, MAEd, MSA, MSAgEd, MSAg.Mgt.`
         }
       ]
     },
@@ -62,15 +105,15 @@ export default function FAQ() {
       questions: [
         {
           question: "What documents and forms can I request at TRAC?",
-          answer: `You can request the following at ${SCHOOL.shortName}:\n\n📄 Documents\n• Transcript of Records (TOR) – ₱100 per page | 6 working days\n• Certificate of Registration (COR) – ₱20 | 1 working day\n• Certificate of Grades (COG) – ₱20 | 1 working day\n• General Weighted Average (GWA) – ₱70 | 2 working days\n• Certification, Authentication, and Verification (CAV) – ₱50 | 2 working days\n• Authentication – ₱50 | 2 working days\n• Diploma (CTC) – ₱50 | 3 working days\n• Certification – ₱50 | 2 working days\n\n📋 Forms\n• Incomplete (INC) Form – ₱15 per subject | 1 working day\n• Shifting Form – ₱20 | 1 working day\n• Adding Form / Adding Subject Form – ₱20 | 1 working day\n• University Clearance Form – ₱20 | 1 working day\n• Honorable Dismissal – ₱50 | 3 working days\n• Requesting Form – ₱20 | 1 working day\n• Application for Graduation Form – ₱20 | 1 working day\n• Advance Credit/s Form – ₱20 | 1 working day\n\n➕ Add-ons\n• Golden Seal – ₱30\n• Documentary Stamp – ₱50\n\nNote: Some documents like TOR, CAV are for alumni only. Complete list with current fees is always available on the request form.`
+          answer: catalogAnswer
         },
         {
           question: "How long does processing take at TRAC?",
-          answer: `Processing times vary by document at TRAC:\n\n• Transcript of Records (TOR) – up to 6 working days\n• COR, COG – 1 working day\n• GWA, CAV, Certification – 2 working days\n• Honorable Dismissal – 3 working days\n• INC Form – 1 working day (can be released immediately as pre-printed)\n• All Forms (Shifting, Adding, Clearance) – 1 working day\n\nProcessing days exclude weekends and holidays. ${OFFICE.processing.note}\n\nOffice Schedule: ${OFFICE.schedule.full}\nLunch break: ${OFFICE.schedule.lunchBreak} (closed)`
+          answer: processingAnswer
         },
         {
           question: "What are the requirements for claiming my document at TRAC?",
-          answer: `When picking up your document at ${SCHOOL.contact.location}, bring:\n• Valid ID (school ID, passport, driver's license, etc.)\n• Official Receipt from the Cashier's Office\n• Your Request ID or Tracking Code\n\nIf a representative will claim on your behalf:\n• Authorization letter signed by you\n• Valid ID of both you and your representative\n• Official Receipt\n• Your Request ID or Tracking Code\n\nOffice: ${OFFICE.schedule.full}`
+          answer: `When picking up your document at ${SCHOOL.contact.location}, bring:\n• Valid ID (school ID, passport, driver's license, etc.)\n• Official Receipt from the Cashier's Office\n• Your Request ID or Tracking Code\n\nIf a representative will claim on your behalf:\n• Authorization letter signed by you\n• Valid ID of both you and your representative\n• Official Receipt\n• Your Request ID or Tracking Code\n\nOffice: ${officeHours}`
         },
         {
           question: "Can I cancel my request?",
@@ -78,7 +121,7 @@ export default function FAQ() {
         },
         {
           question: "What is the manual process for TOR at TRAC?",
-          answer: `TRAC TOR Manual Process:\n1. Proceed to respective department (ICS, ISCJS, IVTES, IAS, GS) and obtain clearance\n2. Proceed to library for clearance\n3. Proceed to cashier\n4. Proceed to Registrar's Office\n5. Return to cashier, if required\n6. Wait for TOR to be processed and released\n\nRequirements for TOR: Bound thesis, Diploma, Permanent Record\nFee: ₱100 per page`
+          answer: `TRAC TOR Manual Process:\n1. Proceed to respective department (ICS, ISCJS, IVTES, IAS, GS) and obtain clearance\n2. Proceed to library for clearance\n3. Proceed to cashier\n4. Proceed to Registrar's Office\n5. Return to cashier, if required\n6. Wait for TOR to be processed and released\n\nRequirements for TOR: Bound thesis, Diploma, Permanent Record\nCheck the current catalog for TOR availability, fee, and processing days.`
         },
         {
           question: "What if I received the wrong document or it is damaged?",
@@ -92,11 +135,11 @@ export default function FAQ() {
       questions: [
         {
           question: "How do I pay for my request at TRAC?",
-          answer: `Payment Process at TRAC:\n1. Submit your request online – you will receive a Request ID and Queue Number.\n2. Proceed to the University Cashier's Office.\n3. Present your Request ID or Tracking Code.\n4. Pay the exact amount shown on your request confirmation.\n5. Keep the official receipt – you will need it to claim your document at Registrar's Office.\n\nNote: Online payment is not yet available. All payments must be made in person at the Cashier's Office.\n\nOffice Hours: ${OFFICE.schedule.full}\nFee Table: TOR ₱100/page, COR ₱20, COG ₱20, GWA ₱70, CAV ₱50, INC ₱15/subject, Golden Seal ₱30, Documentary Stamp ₱50, Honorable Dismissal ₱50, Requesting Form ₱20`
+          answer: `Payment Process at TRAC:\n1. Submit your request online – you will receive a Request ID and Queue Number.\n2. Proceed to the University Cashier's Office.\n3. Present your Request ID or Tracking Code.\n4. Pay the exact amount shown on your request confirmation.\n5. Keep the official receipt – you will need it to claim your document at Registrar's Office.\n\nNote: Online payment is not yet available. All payments must be made in person at the Cashier's Office.\n\nOffice Hours: ${officeHours}\nReview current catalog fees and fee units on the Request Document page before paying.`
         },
         {
           question: "What are the current TRAC document fees?",
-          answer: `TRAC Official Document Fees:\n\nDocuments:\n• Transcript of Records (TOR): ₱100 per page\n• Certificate of Registration (COR): ₱20\n• Certificate of Grades (COG): ₱20\n• General Weighted Average (GWA): ₱70\n• Certification, Authentication, and Verification (CAV): ₱50\n• Authentication: ₱50\n• Certification: ₱50\n• Diploma (CTC): ₱50\n• Report of Grade (ROG): ₱20\n• Evaluation of Grades: ₱20\n\nForms:\n• Incomplete (INC) Form: ₱15 per subject\n• Shifting Form: ₱20\n• Adding Form: ₱20\n• University Clearance: ₱20\n• Honorable Dismissal: ₱50\n• Requesting Form: ₱20\n• Application for Graduation: ₱20\n\nAdd-ons:\n• Golden Seal: ₱30\n• Documentary Stamp: ₱50\n\nThe total fee is automatically calculated when you select a document and number of copies. Future v2 will support fee formulas.`
+          answer: feeAnswer
         }
       ]
     },
@@ -124,11 +167,11 @@ export default function FAQ() {
       questions: [
         {
           question: "How do I track my request at TRAC?",
-          answer: `There are two ways at ${SCHOOL.shortName}:\n1. Log in to your dashboard – your recent requests are listed there with queue numbers.\n2. Go to the 'Track Status' page and enter your Request ID.\n\nThe statuses you will see are:\n• Pending – Awaiting staff review\n• Processing – Your document is being prepared\n• Ready – Your document is ready for pickup at ${SCHOOL.contact.location}\n• Claimed – You have picked up your document\n• Rejected – The request was declined (reason provided)\n\nOffice: ${OFFICE.schedule.full}`
+          answer: `There are two ways at ${SCHOOL.shortName}:\n1. Log in to your dashboard – your recent requests are listed there with queue numbers.\n2. Go to the 'Track Status' page and enter your Request ID.\n\nThe statuses you will see are:\n• Pending – Awaiting staff review\n• Processing – Your document is being prepared\n• Ready – Your document is ready for pickup at ${SCHOOL.contact.location}\n• Claimed – You have picked up your document\n• Rejected – The request was declined (reason provided)\n\nOffice: ${officeHours}`
         },
         {
           question: "Where do I claim my documents at TRAC?",
-          answer: `Claim your documents at ${SCHOOL.contact.location}. Office hours are ${OFFICE.schedule.full}. ${OFFICE.schedule.closedNote}. Bring a valid ID, your official receipt, and your Request ID. Documents must be claimed within 30 days after they become Ready.`
+          answer: `Claim your documents at ${SCHOOL.contact.location}. Office hours are ${officeHours}. ${OFFICE.schedule.closedNote}. Bring a valid ID, your official receipt, and your Request ID. Documents must be claimed within 30 days after they become Ready.`
         },
         {
           question: "Can someone else claim my documents?",
@@ -176,7 +219,7 @@ export default function FAQ() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#F1F8E9]/30 to-white py-10 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
-        
+
         <div className="text-center mb-10">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-[#1B5E20] to-[#F9A825] rounded-full mb-4 shadow-lg">
             <FileText className="w-10 h-10 text-white" />
@@ -184,8 +227,8 @@ export default function FAQ() {
           <h1 className="text-3xl font-bold bg-gradient-to-r from-[#1B5E20] to-[#F9A825] bg-clip-text text-transparent mb-3">
             Frequently Asked Questions
           </h1>
-          <p className="text-gray-600 text-lg">{SCHOOL.fullName} - {SCHOOL.subtitle}</p>
-          <p className="text-xs text-gray-400 mt-2">Institutes: ICS, ISCJS, IVTES, IAS, GS • {OFFICE.schedule.full}</p>
+
+
         </div>
 
         <div className="space-y-6">
@@ -197,7 +240,7 @@ export default function FAQ() {
                   <div><h2 className="text-xl font-bold">{category.category}</h2></div>
                 </div>
               </div>
-              
+
               <div className="divide-y divide-green-50">
                 {category.questions.map((faq, questionIndex) => {
                   const key = `${categoryIndex}-${questionIndex}`;
@@ -214,7 +257,7 @@ export default function FAQ() {
                         </div>
                         {openIndex === key ? <ChevronUp className="w-5 h-5 text-[#1B5E20]" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
                       </button>
-                      
+
                       {openIndex === key && (
                         <div className="px-5 pb-5 ml-12">
                           <div className="bg-gradient-to-r from-[#1B5E20]/5 to-[#F9A825]/10 p-4 rounded-lg border-l-4 border-[#1B5E20]">
@@ -246,7 +289,7 @@ export default function FAQ() {
                   <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0"><Clock className="w-6 h-6 text-white" /></div>
                   <div>
                     <p className="font-semibold text-lg">Office Hours</p>
-                    <p className="text-white/80 mt-2">{OFFICE.schedule.days}<br />{OFFICE.schedule.morning}<br />{OFFICE.schedule.afternoon}<br />({OFFICE.schedule.closedNote})<br />(Closed on weekends and holidays)</p>
+                    <p className="text-white/80 mt-2 whitespace-pre-line">{officeHours}</p>
                   </div>
                 </div>
               </div>
@@ -273,8 +316,7 @@ export default function FAQ() {
 
         <div className="mt-8 text-center">
           <p className="text-gray-500 text-sm">{SCHOOL.systemName} - {SCHOOL.subtitle}</p>
-          <p className="text-gray-400 text-xs mt-2">Based on TRAC Registrar Manual Process & Fee Table • Configurable Architecture v1</p>
-          <p className="text-gray-400 text-xs mt-1">Last Updated: {new Date().getFullYear()} • Queue/Auth/Status Workflow Preserved</p>
+
         </div>
       </div>
     </div>

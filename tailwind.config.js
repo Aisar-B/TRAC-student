@@ -5,6 +5,14 @@ export default {
     "./src/**/*.{js,jsx}",
   ],
   theme: {
+    screens: {
+      xs: '22.5rem',
+      sm: '40rem',
+      md: '48rem',
+      lg: '64rem',
+      xl: '80rem',
+      '2xl': '96rem',
+    },
     extend: {
       colors: {
         trac: {

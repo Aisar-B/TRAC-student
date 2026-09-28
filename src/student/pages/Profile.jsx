@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { 
-  FaUser, FaEnvelope, FaGraduationCap, FaBuilding, 
+import Toast from "../components/Toast";
+import {
+  FaUser, FaEnvelope, FaGraduationCap, FaBuilding,
   FaLock, FaEye, FaEyeSlash, FaSave, FaCheckCircle,
   FaExclamationTriangle, FaSpinner, FaEdit, FaTimes,
   FaIdCard, FaUserTag, FaSchool, FaCalendarAlt, FaInfoCircle
+  ,FaCamera, FaTrash
 } from "react-icons/fa";
 import { SCHOOL, DEPARTMENTS, SYSTEM, PROGRAMS } from "../../config/trac.config";
 
@@ -13,7 +15,9 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
-  
+  const dismissMessage = useCallback(() => setMessage({ type: '', text: '' }), []);
+  const [academicCatalog, setAcademicCatalog] = useState([]);
+
   const [profile, setProfile] = useState({
     id_number: '',
     full_name: '',
@@ -24,7 +28,7 @@ export default function Profile() {
     department: '',
     role: ''
   });
-  
+
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
     email: '',
@@ -33,7 +37,7 @@ export default function Profile() {
     year_graduated: '',
     department: ''
   });
-  
+
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
@@ -44,10 +48,21 @@ export default function Profile() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
-  
+  const [avatarLoading, setAvatarLoading] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState('');
+
   const API_BASE_URL = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/auth` : `${SYSTEM.apiBaseUrl}/auth`;
 
-  const departments = DEPARTMENTS;
+  const departments = academicCatalog.length
+    ? academicCatalog.map(institute => ({
+      code: institute.code,
+      name: `${institute.code} - ${institute.name}`,
+      fullName: institute.name
+    }))
+    : DEPARTMENTS;
+  const selectedInstitute = academicCatalog.length
+    ? academicCatalog.find(institute => institute.code === editData.department)
+    : PROGRAMS.institutes.find(institute => institute.code === editData.department);
 
   const getUserInitials = () => {
     if (!profile.full_name) return '?';
@@ -58,11 +73,7 @@ export default function Profile() {
     return profile.full_name.substring(0, 2).toUpperCase();
   };
 
-  useEffect(() => {
-    fetchProfile();
-  }, []);
-
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     try {
       const token = localStorage.getItem('authToken');
       if (!token) {
@@ -76,6 +87,22 @@ export default function Profile() {
       const data = await response.json();
       const userProfile = data.profile;
       setProfile(userProfile);
+      setAvatarPreview(userProfile.avatar_url || '');
+      const cachedUser = localStorage.getItem('currentUser');
+      if (cachedUser) {
+        try {
+          const parsed = JSON.parse(cachedUser);
+          const currentUser = parsed.user || parsed;
+          localStorage.setItem('currentUser', JSON.stringify({
+            ...currentUser,
+            ...userProfile,
+            name: userProfile.full_name
+          }));
+          window.dispatchEvent(new Event('auth-changed'));
+        } catch (cacheError) {
+          console.error('Error updating cached user:', cacheError);
+        }
+      }
       setEditData({
         email: userProfile.email || '',
         course: userProfile.course || '',
@@ -90,10 +117,91 @@ export default function Profile() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [API_BASE_URL, navigate]);
+
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
+
+  useEffect(() => {
+    let isCurrent = true;
+    const fetchAcademicCatalog = async () => {
+      try {
+        const response = await fetch(`${SYSTEM.apiBaseUrl}/public/settings`);
+        if (!response.ok) return;
+        const data = await response.json();
+        if (isCurrent && Array.isArray(data.academic_settings)) setAcademicCatalog(data.academic_settings);
+      } catch {
+        console.warn('Using default institute names in Profile');
+      }
+    };
+    fetchAcademicCatalog();
+    return () => { isCurrent = false; };
+  }, []);
 
   const handleEditChange = (field, value) => {
+    if (field === 'department') {
+      const institute = academicCatalog.find(item => item.code === value) || PROGRAMS.institutes.find(item => item.code === value);
+      const hasCurrentCourse = institute?.programs?.some(program => program.name === editData.course);
+      setEditData(prev => ({ ...prev, department: value, course: hasCurrentCourse ? prev.course : '' }));
+      return;
+    }
     setEditData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleAvatarUpload = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setMessage({ type: 'error', text: 'Please choose a JPG, PNG, or WebP image.' });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setMessage({ type: 'error', text: 'Profile photos must be 5 MB or smaller.' });
+      return;
+    }
+
+    setAvatarPreview(URL.createObjectURL(file));
+    setAvatarLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('avatar', file);
+      const response = await fetch(`${API_BASE_URL}/profile/avatar`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` },
+        body: formData
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Failed to update profile photo');
+      await fetchProfile();
+      setMessage({ type: 'success', text: 'Profile photo updated successfully.' });
+    } catch (err) {
+      setAvatarPreview(profile.avatar_url || '');
+      setMessage({ type: 'error', text: err.message });
+    } finally {
+      setAvatarLoading(false);
+    }
+  };
+
+  const handleAvatarDelete = async () => {
+    if (!window.confirm('Remove your profile photo?')) return;
+    setAvatarLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/profile/avatar`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Failed to remove profile photo');
+      await fetchProfile();
+      setMessage({ type: 'success', text: 'Profile photo removed.' });
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message });
+    } finally {
+      setAvatarLoading(false);
+    }
   };
 
   const handleSaveProfile = async () => {
@@ -178,23 +286,23 @@ export default function Profile() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#F1F8E9]/30 to-white py-8 px-4">
       <div className="max-w-3xl mx-auto">
-        {message.text && (
-          <div className={`fixed top-20 right-4 z-50 p-4 rounded-lg shadow-lg flex items-center gap-3 animate-slide-in ${
-            message.type === 'success' ? 'bg-[#1B5E20] text-white' : 'bg-red-500 text-white'
-          }`}>
-            {message.type === 'success' ? <FaCheckCircle /> : <FaExclamationTriangle />}
-            <span>{message.text}</span>
-          </div>
-        )}
+        <Toast type={message.type} message={message.text} onDismiss={dismissMessage} />
 
         <div className="text-center mb-8">
           <div className="relative inline-block">
-            <div className="w-28 h-28 bg-gradient-to-r from-[#1B5E20] to-[#2E7D32] rounded-full flex items-center justify-center shadow-lg">
-              <span className="text-4xl font-bold text-white">{getUserInitials()}</span>
+            <div className="w-28 h-28 bg-gradient-to-r from-[#1B5E20] to-[#2E7D32] rounded-full flex items-center justify-center shadow-lg overflow-hidden">
+              {avatarPreview ? <img src={avatarPreview} alt={`${profile.full_name} profile`} className="h-full w-full object-cover" /> : <span className="text-4xl font-bold text-white">{getUserInitials()}</span>}
             </div>
-            <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-[#2E7D32] rounded-full border-4 border-white flex items-center justify-center">
-              <FaCheckCircle className="text-white text-sm" />
-            </div>
+            <label className="absolute -bottom-2 -right-2 w-8 h-8 bg-[#2E7D32] rounded-full border-4 border-white flex items-center justify-center cursor-pointer hover:bg-[#1B5E20]" title="Update profile photo">
+              {avatarLoading ? <FaSpinner className="text-white text-sm animate-spin" /> : <FaCamera className="text-white text-sm" />}
+              <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleAvatarUpload} disabled={avatarLoading} />
+            </label>
+            {avatarPreview && (
+              <button type="button" onClick={handleAvatarDelete} disabled={avatarLoading} className="absolute -bottom-2 -left-2 w-8 h-8 bg-white rounded-full border border-red-200 flex items-center justify-center text-red-500 hover:bg-red-50" title="Remove profile photo">
+                <FaTrash className="text-xs" />
+              </button>
+            )}
+            <div className="absolute top-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-white" aria-label="Verified account" />
           </div>
           <h1 className="text-2xl font-bold text-gray-800 mt-4">{profile.full_name}</h1>
           <p className="text-gray-500 capitalize">{profile.role} • {SCHOOL.shortName}</p>
@@ -219,7 +327,7 @@ export default function Profile() {
               )}
             </div>
           </div>
-          
+
           <div className="p-6">
             {!isEditing ? (
               <>
@@ -284,10 +392,7 @@ export default function Profile() {
                   )}
                 </div>
 
-                <div className="mt-6 p-3 bg-[#F1F8E9] rounded-lg border border-green-100">
-                  <p className="text-xs text-[#1B5E20] font-semibold">TRAC Programs</p>
-                  <p className="text-[11px] text-gray-600 mt-1">BSIT, BSIS, BSCRIM, BTVTED, BTLED, BSHM, BSHRRM, BSHT, BSA, BSF, BSAB, MAEd, MSA, MSAgEd, MSAg.Mgt.</p>
-                </div>
+
               </>
             ) : (
               <div className="space-y-5">
@@ -308,11 +413,14 @@ export default function Profile() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
                   <input type="email" value={editData.email} onChange={(e) => handleEditChange('email', e.target.value)} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1B5E20] focus:border-transparent outline-none transition" />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Institute / Department</label>
                   <select value={editData.department} onChange={(e) => handleEditChange('department', e.target.value)} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1B5E20] focus:border-transparent outline-none transition">
                     <option value="">Select Institute</option>
+                    {editData.department && !departments.some(dept => dept.code === editData.department) && (
+                      <option value={editData.department}>{editData.department} (current value)</option>
+                    )}
                     {departments.map(dept => (<option key={dept.code} value={dept.code}>{dept.name}</option>))}
                   </select>
                   <p className="mt-2 text-xs text-amber-600 flex items-center gap-1"><FaInfoCircle className="w-3 h-3" />Changing your institute may affect your pending requests.</p>
@@ -320,7 +428,15 @@ export default function Profile() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Course</label>
-                  <input type="text" value={editData.course} onChange={(e) => handleEditChange('course', e.target.value)} placeholder="e.g., Bachelor of Science in Information Technology" className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1B5E20] focus:border-transparent outline-none transition" />
+                  <select value={editData.course} onChange={(e) => handleEditChange('course', e.target.value)} disabled={!editData.department} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1B5E20] focus:border-transparent outline-none transition disabled:bg-gray-100">
+                    <option value="">Select Course</option>
+                    {editData.course && !selectedInstitute?.programs?.some(program => program.name === editData.course) && (
+                      <option value={editData.course}>{editData.course} (current value)</option>
+                    )}
+                    {(selectedInstitute?.programs || []).map(program => (
+                      <option key={program.code} value={program.name}>{program.name}</option>
+                    ))}
+                  </select>
                 </div>
 
                 {profile.role === 'student' && (
@@ -344,7 +460,7 @@ export default function Profile() {
                 )}
 
                 <div className="flex gap-3 pt-4">
-                  <button onClick={handleSaveProfile} disabled={saving} className="px-6 py-2.5 bg-gradient-to-r from-[#1B5E20] to-[#2E7D32] text-white rounded-lg font-medium hover:opacity-90 transition disabled:opacity-50 flex items-center gap-2">
+                  <button onClick={handleSaveProfile} disabled={saving} className="trac-button flex items-center gap-2 rounded-lg px-6 py-2.5 font-medium">
                     {saving ? <FaSpinner className="animate-spin" /> : <FaSave />}{saving ? 'Saving...' : 'Save Changes'}
                   </button>
                   <button onClick={() => setIsEditing(false)} className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition flex items-center gap-2"><FaTimes />Cancel</button>
@@ -361,7 +477,7 @@ export default function Profile() {
               <button onClick={() => setShowPasswordForm(!showPasswordForm)} className="text-sm text-[#1B5E20] hover:underline">{showPasswordForm ? 'Cancel' : 'Change Password'}</button>
             </div>
           </div>
-          
+
           {showPasswordForm && (
             <div className="p-6">
               <form onSubmit={handlePasswordChange} className="space-y-5">
@@ -391,7 +507,7 @@ export default function Profile() {
                     <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700">{showConfirmPassword ? <FaEyeSlash /> : <FaEye />}</button>
                   </div>
                 </div>
-                <button type="submit" disabled={passwordLoading} className="w-full py-2.5 bg-gradient-to-r from-[#1B5E20] to-[#2E7D32] text-white rounded-lg font-medium hover:opacity-90 transition disabled:opacity-50">
+                <button type="submit" disabled={passwordLoading} className="trac-button w-full rounded-lg py-2.5 font-medium">
                   {passwordLoading ? <FaSpinner className="animate-spin mx-auto" /> : 'Update Password'}
                 </button>
               </form>
@@ -400,13 +516,6 @@ export default function Profile() {
         </div>
       </div>
 
-      <style>{`
-        @keyframes slideIn {
-          from { transform: translateX(100%); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-        .animate-slide-in { animation: slideIn 0.3s ease-out; }
-      `}</style>
     </div>
   );
 }

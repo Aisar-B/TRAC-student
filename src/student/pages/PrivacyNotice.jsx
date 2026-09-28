@@ -1,12 +1,12 @@
-import React, { useState } from "react";
-import { 
-  Shield, 
-  Lock, 
-  FileText, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  ChevronDown, 
+import React, { useEffect, useState } from "react";
+import {
+  Shield,
+  Lock,
+  FileText,
+  Mail,
+  Phone,
+  MapPin,
+  ChevronDown,
   ChevronUp,
   CheckCircle,
   AlertTriangle,
@@ -15,10 +15,28 @@ import {
   Bell,
   Clock
 } from "lucide-react";
-import { SCHOOL, OFFICE } from "../../config/trac.config";
+import { SCHOOL, OFFICE, SYSTEM } from "../../config/trac.config";
 
 export default function PrivacyNotice() {
   const [openIndex, setOpenIndex] = useState(null);
+  const [contactEmail, setContactEmail] = useState(SCHOOL.contact.email);
+  const [officeHours, setOfficeHours] = useState(OFFICE.schedule.full);
+
+  useEffect(() => {
+    const fetchPublicSettings = async () => {
+      try {
+        const response = await fetch(`${SYSTEM.apiBaseUrl}/public/settings`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.contact_email) setContactEmail(data.contact_email);
+          if (data.office_hours) setOfficeHours(data.office_hours);
+        }
+      } catch {
+        console.warn('Using default contact information');
+      }
+    };
+    fetchPublicSettings();
+  }, []);
 
   const privacySections = [
     {
@@ -29,7 +47,7 @@ export default function PrivacyNotice() {
           <p className="mb-4 text-gray-700">
             The {SCHOOL.systemName} is a "{SCHOOL.subtitle}" designed to enable Students/Alumni to submit document requests, track their status in the digital queue, and receive real-time updates via email. This Privacy Notice explains how we handle your personal information in compliance with the Data Privacy Act of 2012 (Republic Act No. 10173).
           </p>
-          
+
           <div className="bg-gradient-to-r from-[#1B5E20]/5 to-[#F9A825]/5 p-4 rounded-lg border border-green-100">
             <h4 className="font-semibold text-gray-800 mb-2">What Data We Collect:</h4>
             <ul className="list-disc list-inside text-gray-700 space-y-1">
@@ -42,7 +60,7 @@ export default function PrivacyNotice() {
               <li>Payment records and official receipts</li>
             </ul>
           </div>
-          
+
           <p className="mt-4 text-gray-700">
             Your data is used for processing document requests, managing your position in the queue, sending real-time email updates, and system improvement. We may also use anonymized data for reporting, research, and accreditation purposes.
           </p>
@@ -76,8 +94,7 @@ export default function PrivacyNotice() {
             <div className="bg-gradient-to-r from-[#1B5E20]/10 to-[#F9A825]/10 p-4 rounded-lg border border-green-100">
               <h4 className="font-semibold text-gray-800 mb-2">Document Processing - TRAC</h4>
               <ul className="space-y-2 text-sm text-gray-700">
-                <li className="flex items-center gap-2"><FileText className="w-4 h-4 text-[#1B5E20]" />TOR ₱100/page, COR ₱20, COG ₱20, GWA ₱70, CAV ₱50</li>
-                <li className="flex items-center gap-2"><FileText className="w-4 h-4 text-[#1B5E20]" />Forms: INC ₱15/subject, Shifting, Adding, Honorable Dismissal ₱50</li>
+                <li className="flex items-center gap-2"><FileText className="w-4 h-4 text-[#1B5E20]" />Available documents and forms, fees, and processing days are shown on the current request form.</li>
                 <li className="flex items-center gap-2"><Clock className="w-4 h-4 text-[#1B5E20]" />Track estimated completion dates</li>
               </ul>
             </div>
@@ -85,7 +102,7 @@ export default function PrivacyNotice() {
               <h4 className="font-semibold text-gray-800 mb-2">Payment Processing</h4>
               <ul className="space-y-2 text-sm text-gray-700">
                 <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-[#1B5E20]" />Record payment status and official receipts</li>
-                <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-[#1B5E20]" />Calculate fees based on document type and copies (TRAC fee table)</li>
+                <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-[#1B5E20]" />Confirm the current fee and fee unit shown on the request before payment</li>
               </ul>
             </div>
           </div>
@@ -118,7 +135,7 @@ export default function PrivacyNotice() {
               </ul>
             </div>
           </div>
-          
+
           <p className="text-gray-700">
             Your personal information will not be shared with third parties except as required by law (CHED, COA) or with your explicit consent. We do not sell, rent, or trade your personal data. All access to your information is logged and monitored.
           </p>
@@ -161,7 +178,7 @@ export default function PrivacyNotice() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#F1F8E9]/30 to-white py-10 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
-        
+
         <div className="text-center mb-10">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-[#1B5E20] to-[#2E7D32] rounded-full mb-4 shadow-lg">
             <Shield className="w-10 h-10 text-white" />
@@ -194,7 +211,7 @@ export default function PrivacyNotice() {
                   <ChevronDown className="w-6 h-6 text-white" />
                 )}
               </button>
-              
+
               {openIndex === index && (
                 <div className="p-6">
                   <div className="border-l-4 border-[#1B5E20] pl-4">
@@ -241,7 +258,7 @@ export default function PrivacyNotice() {
                   </div>
                   <div>
                     <p className="font-semibold text-lg">Email Address</p>
-                    <p className="text-white/80 mt-2">{SCHOOL.contact.email}</p>
+                    <p className="text-white/80 mt-2">{contactEmail}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-4">
@@ -261,7 +278,7 @@ export default function PrivacyNotice() {
             <div className="mt-6 pt-6 border-t border-white/20 text-center">
               <p className="text-white/80 text-sm">
                 For data privacy concerns or to exercise your rights under RA 10173, contact our Data Privacy Officer.<br/>
-                Office Hours: {OFFICE.schedule.full} - {OFFICE.schedule.closedNote}
+                Office Hours: {officeHours}
               </p>
             </div>
           </div>
@@ -269,7 +286,7 @@ export default function PrivacyNotice() {
 
         <div className="mt-8 text-center">
           <p className="text-gray-500 text-sm">{SCHOOL.systemName} - {SCHOOL.subtitle}</p>
-          <p className="text-xs text-gray-400 mt-1">{SCHOOL.fullName} • Programs: ICS, ISCJS, IVTES, IAS, GS</p>
+
         </div>
       </div>
     </div>

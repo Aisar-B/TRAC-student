@@ -144,13 +144,69 @@ Future v2 enhancements: fee formulas (per page, per subject), richer policy rule
 
 ## 🚀 Getting Started
 
+### Requirements
+
+- Node.js 20.19 or newer (Node.js 22.12 or newer is recommended) and npm.
+- The TRAC backend API running locally or deployed and reachable by the browser.
+
+### Dependencies
+
+Install the exact project dependencies from `package.json` with `npm install`.
+
+| Package | Purpose |
+|---|---|
+| `react`, `react-dom` | User interface and browser rendering |
+| `react-router-dom` | Client-side page routing |
+| `lucide-react`, `react-icons` | Interface icons |
+| `clsx` | Conditional class-name composition |
+| `vite`, `@vitejs/plugin-react` | Development server and production bundler |
+| `tailwindcss`, `@tailwindcss/postcss` | Utility styling and CSS processing |
+| `eslint`, `@eslint/js`, `globals` | JavaScript linting configuration |
+| `eslint-plugin-react-hooks`, `eslint-plugin-react-refresh` | React Hooks and Vite refresh lint rules |
+
+### Environment Configuration
+
+Create a `.env` file in this project directory:
+
+```dotenv
+VITE_API_URL=http://localhost:5000/api
+```
+
+`VITE_API_URL` is the backend API base URL. The default local value points to the backend's default port. For deployment, set it to the public API URL including `/api`, then rebuild the app. Vite variables prefixed with `VITE_` are included in browser code; do not put secrets in them.
+
+The backend must allow the student site origin through its `CORS_ORIGINS` setting. This frontend uses port `5173` for development and `4173` for preview by default.
+
+### Install and Run
+
 ```bash
 npm install
 npm run dev
-# Backend expected at http://localhost:5000/api
 ```
 
-Vite dev server binds to 0.0.0.0 for preview: https://{port}-{sandboxId}.e2b.app
+Vite binds to `0.0.0.0` for development and serves the app at `http://localhost:5173`. In hosted preview environments, use the preview URL provided by that environment.
+
+### Available Commands
+
+| Command | Description |
+|---|---|
+| `npm run dev` | Start the Vite development server. |
+| `npm run lint` | Run ESLint across the project. |
+| `npm run build` | Create an optimized production build in `dist/`. |
+| `npm run preview` | Preview the latest production build locally on port `4173`. Run `npm run build` first. |
+
+### Production Deployment
+
+1. Set `VITE_API_URL` to the deployed backend API base URL.
+2. Confirm the backend's `CORS_ORIGINS` allows the deployed student site's origin.
+3. Install, lint, and build the frontend:
+
+  ```bash
+  npm install
+  npm run lint
+  npm run build
+  ```
+
+4. Deploy the contents of `dist/` to a static hosting provider. Configure the host to serve `index.html` for application routes so React Router paths work on refresh.
 
 ## 📁 Project Structure
 

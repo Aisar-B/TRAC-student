@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { 
+import {
   Phone, Mail, MapPin, Clock, AlertCircle, CheckCircle,
   ChevronDown, ChevronUp, Users, FileText, Shield, HelpCircle, CreditCard
 } from "lucide-react";
@@ -8,6 +8,8 @@ import { SCHOOL, OFFICE, SYSTEM } from "../../config/trac.config";
 export default function NeedHelp() {
   const [openCategory, setOpenCategory] = useState(null);
   const [contactEmail, setContactEmail] = useState(SCHOOL.contact.email);
+  const [officeHours, setOfficeHours] = useState(OFFICE.schedule.full);
+  const [maxCopies, setMaxCopies] = useState(SYSTEM.requests.maxCopies);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -16,8 +18,12 @@ export default function NeedHelp() {
         if (response.ok) {
           const data = await response.json();
           if (data.contact_email) setContactEmail(data.contact_email);
+          if (data.office_hours) setOfficeHours(data.office_hours);
+          if (Number.isInteger(Number(data.max_copies_per_request)) && Number(data.max_copies_per_request) > 0) {
+            setMaxCopies(Number(data.max_copies_per_request));
+          }
         }
-      } catch (err) {
+      } catch {
         console.warn('Using TRAC default contact email');
       }
     };
@@ -31,10 +37,10 @@ export default function NeedHelp() {
       color: "from-[#1B5E20] to-[#2E7D32]",
       items: [
         { problem: "Can't login to my TRAC account", solution: "1. Check if your ID number (00-00000) and password are correct\n2. Use 'Forgot Password?' feature to reset via Email\n3. If still issues, visit Registrar's Office at Sanga-Sanga, Bongao Tawi-Tawi with valid ID\n4. Ensure you selected correct institute (ICS, ISCJS, IVTES, IAS, GS)", icon: <AlertCircle className="w-5 h-5 text-[#1B5E20]" /> },
-        { problem: "Not receiving email notifications from TRAC", solution: `1. Check your email address in Profile settings\n2. Check spam/junk folder\n3. Add ${contactEmail} to contacts\n4. Update email at Registrar's Office if needed\n5. System sends from ${SCHOOL.contact.email}`, icon: <Mail className="w-5 h-5 text-[#1B5E20]" /> },
-        { problem: "Document request not submitting", solution: `1. Check internet connection\n2. Make sure all required fields are filled\n3. Check if copies is within limit (max ${SYSTEM.requests.maxCopies})\n4. You can request each document type once per day\n5. Try using Chrome or Edge browser\n6. TRAC Fees: TOR ₱100/page, COR ₱20, COG ₱20, GWA ₱70, CAV ₱50`, icon: <FileText className="w-5 h-5 text-[#F9A825]" /> },
-        { problem: "Payment confirmation issues at TRAC Cashier", solution: "1. Bring payment receipt to Cashier's Office for verification\n2. Contact Registrar with payment reference number\n3. Keep official receipt safe until document is claimed\n4. TRAC Office Hours: Monday-Friday 8AM-11:45AM, 1PM-5PM, closed lunch 11:45AM-1PM", icon: <CreditCard className="w-5 h-5 text-[#2E7D32]" /> },
-        { problem: "Wrong document requested", solution: "1. Contact Registrar immediately if still pending\n2. Provide Request ID and correction needed\n3. Visit office if processing has started\n4. May need to submit a new request\n5. Check fee table: TOR ₱100/page, COR ₱20, COG ₱20, etc.", icon: <AlertCircle className="w-5 h-5 text-amber-500" /> }
+        { problem: "Not receiving email notifications from TRAC", solution: `1. Check your email address in Profile settings\n2. Check spam/junk folder\n3. Add ${contactEmail} to contacts\n4. Update email at Registrar's Office if needed\n5. System sends from ${contactEmail}`, icon: <Mail className="w-5 h-5 text-[#1B5E20]" /> },
+        { problem: "Document request not submitting", solution: `1. Check internet connection\n2. Make sure all required fields are filled\n3. Check that quantity does not exceed the configured limit of ${maxCopies}\n4. You can request each document type once per day\n5. Try using Chrome or Edge browser\n6. Check current fees and processing times on the Request Document page`, icon: <FileText className="w-5 h-5 text-[#F9A825]" /> },
+        { problem: "Payment confirmation issues at TRAC Cashier", solution: `1. Bring payment receipt to Cashier's Office for verification\n2. Contact Registrar with payment reference number\n3. Keep official receipt safe until document is claimed\n4. TRAC Office Hours: ${officeHours}`, icon: <CreditCard className="w-5 h-5 text-[#2E7D32]" /> },
+        { problem: "Wrong document requested", solution: "1. Contact Registrar immediately if still pending\n2. Provide Request ID and correction needed\n3. Visit office if processing has started\n4. May need to submit a new request\n5. Verify the current item and fee unit on the Request Document page before submitting.", icon: <AlertCircle className="w-5 h-5 text-amber-500" /> }
       ]
     },
     {
@@ -43,10 +49,10 @@ export default function NeedHelp() {
       color: "from-[#F9A825] to-[#F57F17]",
       items: [
         { problem: "First-time registration help at TRAC", solution: "For new students who need assistance with account creation or verification. Bring valid ID and know your institute (ICS, ISCJS, IVTES, IAS, GS) and program (BSIT, BSIS, BSCRIM, BTVTED, BTLED, BSHM, BSHRRM, BSHT, BSA, BSF, BSAB).", number: "1" },
-        { problem: "Document authentication & CAV", solution: "For documents requiring official stamps, signatures, Golden Seal ₱30, Documentary Stamp ₱50, and CAV authentication ₱50.", number: "2" },
+        { problem: "Document authentication & CAV", solution: "For alumni documents requiring verification, request the Certificate of Authentication and Verification (CAV) through the approved catalog. Fee and processing follow the current request form.", number: "2" },
         { problem: "Special requests at TRAC", solution: "For requests not available in the online system or urgent/priority requests. Manual process may apply: department clearance, library clearance, cashier, registrar.", number: "3" },
         { problem: "Alumni record issues", solution: "For graduates (MAEd, MSA, MSAgEd, MSAg.Mgt., BSIT, etc.) having trouble registering online or needing verification of old records. Bring Diploma, Permanent Record, Bound thesis for TOR.", number: "4" },
-        { problem: "Payment and receipt help", solution: "If you need assistance with payment confirmation or receipt verification at Cashier's Office. Fees: TOR ₱100/page, COR ₱20, COG ₱20, GWA ₱70, CAV ₱50, INC ₱15/subject, Honorable Dismissal ₱50.", number: "5" },
+        { problem: "Payment and receipt help", solution: "If you need assistance with payment confirmation or receipt verification at Cashier's Office. Confirm the current fee and fee unit shown on your request confirmation.", number: "5" },
         { problem: "Authorized representatives", solution: "To register SPA (Special Power of Attorney) for document claiming. Requirements: Authorization letter, Valid IDs, Official Receipt, Request ID.", number: "6" }
       ]
     },
@@ -56,10 +62,10 @@ export default function NeedHelp() {
       color: "from-[#2E7D32] to-[#1B5E20]",
       items: [
         { problem: "Account Security at TRAC", solution: "• Never share your password\n• Use strong passwords with special characters\n• Logout from public computers\n• Update password regularly\n• Your ID format: 00-00000", tip: "Security First" },
-        { problem: "Email Notification Management", solution: `• Keep email address updated in Profile\n• Check spam folder regularly\n• Save Request ID and Queue Number for tracking\n• Add ${contactEmail} to contacts\n• TRAC sends from ${SCHOOL.contact.email}`, tip: "Stay Updated" },
-        { problem: "Document Requests at TRAC", solution: `• Double-check document type before submitting (TOR, COR, COG, GWA, CAV, etc.)\n• Copy limit is ${SYSTEM.requests.maxCopies} per request\n• You can only request each type once per day\n• Request early before deadlines\n• Know your fee: TOR ₱100/page, COR ₱20, COG ₱20, GWA ₱70, CAV ₱50\n• Manual process: Clearance → Library → Cashier → Registrar`, tip: "Plan Ahead" },
-        { problem: "Office Visits to TRAC", solution: `• Come during office hours: ${OFFICE.schedule.full}\n• Lunch break closed: ${OFFICE.schedule.lunchBreak}\n• Bring valid ID and requirements (Thesis, Diploma, Permanent Record for TOR)\n• Check request status online first\n• Avoid peak hours (lunch, 3-5PM)\n• Location: ${SCHOOL.contact.location}`, tip: "Be Prepared" },
-        { problem: "Payment Tips at TRAC", solution: "• Pay exact amount when possible (see TRAC fee table)\n• Keep official receipt safe\n• Bring receipt when claiming documents\n• All payments are made at the Cashier's Office\n• Golden Seal ₱30, Documentary Stamp ₱50 if required", tip: "Payment Wise" },
+        { problem: "Email Notification Management", solution: `• Keep email address updated in Profile\n• Check spam folder regularly\n• Save Request ID and Queue Number for tracking\n• Add ${contactEmail} to contacts\n• TRAC sends from ${contactEmail}`, tip: "Stay Updated" },
+        { problem: "Document Requests at TRAC", solution: `• Double-check the document or form before submitting\n• Quantity limit is ${maxCopies} per request\n• You can only request each type once per day\n• Request early before deadlines\n• Review the current fee and unit on the request form\n• Manual process: Clearance → Library → Cashier → Registrar`, tip: "Plan Ahead" },
+        { problem: "Office Visits to TRAC", solution: `• Come during office hours: ${officeHours}\n• Lunch break closed: ${OFFICE.schedule.lunchBreak}\n• Bring valid ID and requirements (Thesis, Diploma, Permanent Record for TOR)\n• Check request status online first\n• Avoid peak hours (lunch, 3-5PM)\n• Location: ${SCHOOL.contact.location}`, tip: "Be Prepared" },
+        { problem: "Payment Tips at TRAC", solution: "• Pay the exact amount shown on your request confirmation\n• Keep official receipt safe\n• Bring receipt when claiming documents\n• All payments are made at the Cashier's Office\n• Confirm the fee and fee unit shown on the request form before payment", tip: "Payment Wise" },
         { problem: "Tracking Requests at TRAC", solution: "• Use Request ID and Queue Number for tracking\n• Check email for status updates\n• Monitor estimated completion date\n• Claim immediately when ready (within 30 days)\n• First-come, first-served basis", tip: "Track Smart" }
       ]
     }
@@ -69,7 +75,7 @@ export default function NeedHelp() {
     { icon: <Phone className="w-6 h-6" />, title: "Phone Hotline", detail: SCHOOL.contact.phone, sub: "For urgent concerns - TRAC", gradient: "from-[#1B5E20] to-[#2E7D32]" },
     { icon: <Mail className="w-6 h-6" />, title: "Email Support", detail: contactEmail, sub: "For inquiries and follow-ups", gradient: "from-[#2E7D32] to-[#33691E]" },
     { icon: <MapPin className="w-6 h-6" />, title: "Office Location", detail: "Registrar's Office, TRAC", sub: SCHOOL.footer.location, gradient: "from-[#F9A825] to-[#F57F17]" },
-    { icon: <Clock className="w-6 h-6" />, title: "Office Hours", detail: OFFICE.schedule.short, sub: `Lunch: ${OFFICE.schedule.lunchBreak}`, gradient: "from-[#1B5E20] to-[#33691E]" },
+    { icon: <Clock className="w-6 h-6" />, title: "Office Hours", detail: officeHours, sub: `Lunch: ${OFFICE.schedule.lunchBreak}`, gradient: "from-[#1B5E20] to-[#33691E]" },
   ];
 
   const toggleCategory = (index) => {
@@ -79,7 +85,7 @@ export default function NeedHelp() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#F1F8E9]/30 to-white py-10 px-4 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto">
-        
+
         <div className="text-center mb-10">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-[#1B5E20] to-[#F9A825] rounded-full mb-4 shadow-lg">
             <HelpCircle className="w-10 h-10 text-white" />
@@ -117,7 +123,7 @@ export default function NeedHelp() {
                 </div>
                 {openCategory === categoryIndex ? <ChevronUp className="w-6 h-6 text-white" /> : <ChevronDown className="w-6 h-6 text-white" />}
               </button>
-              
+
               {openCategory === categoryIndex && (
                 <div className="p-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -151,9 +157,9 @@ export default function NeedHelp() {
               <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center flex-shrink-0"><Shield className="w-6 h-6 text-white" /></div>
               <div>
                 <h3 className="text-xl font-bold mb-3">Important Notice - {SCHOOL.shortName}</h3>
-                <p className="text-white/90"><strong>For immediate assistance:</strong> Visit the Registrar's Office in person with your valid ID and relevant documents. {OFFICE.schedule.full}, {OFFICE.schedule.closedNote}</p>
+                <p className="text-white/90"><strong>For immediate assistance:</strong> Visit the Registrar's Office in person with your valid ID and relevant documents. {officeHours}, {OFFICE.schedule.closedNote}</p>
                 <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-white/10 rounded-lg p-3"><p className="font-semibold">📞 Phone Support</p><p className="text-sm text-white/80">{SCHOOL.contact.phone} ({OFFICE.schedule.full})</p></div>
+                  <div className="bg-white/10 rounded-lg p-3"><p className="font-semibold">📞 Phone Support</p><p className="text-sm text-white/80">{SCHOOL.contact.phone} ({officeHours})</p></div>
                   <div className="bg-white/10 rounded-lg p-3"><p className="font-semibold">📧 Email Support</p><p className="text-sm text-white/80">{contactEmail}</p></div>
                 </div>
               </div>
@@ -164,7 +170,7 @@ export default function NeedHelp() {
         <div className="mt-8 text-center">
           <div className="inline-flex flex-col items-center bg-gradient-to-r from-[#1B5E20]/10 to-[#F9A825]/10 rounded-xl p-6 border border-green-100">
             <h3 className="font-bold text-gray-800 mb-2">Check our FAQ Section - TRAC</h3>
-            <p className="text-gray-700 mb-4 max-w-md">Many common questions about TRAC document requests, fees (TOR ₱100/page, COR ₱20, etc.), and notifications are already answered.</p>
+            <p className="text-gray-700 mb-4 max-w-md">Many common questions about TRAC document requests, current fees and processing times, and notifications are already answered.</p>
             <a href="/faq" className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#1B5E20] to-[#2E7D32] text-white rounded-lg hover:opacity-90 transition-opacity shadow-sm hover:shadow">Go to FAQ Section <ChevronUp className="w-4 h-4 rotate-90" /></a>
           </div>
         </div>
